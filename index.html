@@ -1,0 +1,258 @@
+<!doctype HTML>
+<html>
+<head>
+    <title>Norville's Frame Chart Calculator</title>
+	<meta name="tagline" content="You know, for kids!">
+	<meta name="author" content="Peter Postma">
+	<meta name="revised" content="August 9th, 2020, 11:01pm">
+	
+	<script type="text/javascript" src="jquery.js"></script>
+	<script type="text/javascript" src="nouislider.min.js"></script>
+
+	<link href="nouislider.min.css" rel="stylesheet">
+
+	<style>
+		body {
+			font-family: "Liberation Sans", sans-serif;
+			font-size: 1em;
+			line-height: 1.5;
+		}
+		input {
+			font-size: 1em;
+			width: 4em;
+			margin-right: 1em;
+		}
+		.valueBox {
+			padding: 0.5em;
+		}
+		.valueBox fieldset {
+			border: 1px black solid;
+			width: 50em;
+			padding: 1em;
+		}
+		#sliderBox {
+			position: relative;
+			padding: 10px 20px 10px 20px;
+			margin: 20px 0;
+			overflow: hidden;
+			width: 50em;
+		}
+		#safety-slider-label {
+			margin-top: 2.5em;
+			width: 100%;
+		}
+		#safety-slider-label input {
+            display: block;
+            margin : 0 auto;
+			width: 6em;
+		}
+		#saftey-slider-min-label {
+			float: left;
+			color: #999;
+		}
+		#saftey-slider-max-label {
+			text-align: right;
+			float: right;
+			color: #999;
+		}
+		#calculatedValues {
+			font-weight: bold;
+		}
+		#calculatedValues span {
+			font-weight: normal;
+		}
+		.noUi-pips-horizontal {
+			height: 20px;
+		}
+		#calculatedValues fieldset {
+			border: 1px black solid;
+			width: 25em;
+		}
+		legend {
+			border: 1px black solid;
+			margin-left: 1em;
+			padding: 0.2em 0.8em 
+		}
+	</style>
+	
+	<script>
+		let uiVars = {
+		 	sourceWidth: 4448,
+			sourceHeight: 3096,
+			sourceAspect: 2.0,
+		 	destWidth: 4096,
+			destHeight: 0,    //calulated
+			destAspect: 2.31,
+		};
+		let calcVals = {
+			extractionX: 0,
+			extractionY: 0,
+			extractionWidth: 0,
+			extractionHeight: 0,
+			aspectRatio: 0,
+			hScale: 0,
+			vScale: 0,
+			hSafety: 0,
+			vSafety: 0
+		};
+		
+		function calculateValues() {
+			safteyMargin = parseFloat($('#safety-margin').val()) / 100.0;
+			
+			calcVals.extractionWidth = uiVars.sourceWidth - (uiVars.sourceWidth * safteyMargin);
+			calcVals.extractionX = (uiVars.sourceWidth - calcVals.extractionWidth) / 2.0;
+			calcVals.hScale = uiVars.destWidth / calcVals.extractionWidth;
+			calcVals.hSafety = (uiVars.sourceWidth - calcVals.extractionWidth) / uiVars.sourceWidth * 100.0;
+			
+			calcVals.aspectRatio = uiVars.destAspect;
+			
+			calcVals.extractionHeight = calcVals.extractionWidth / uiVars.destAspect * uiVars.sourceAspect;
+			calcVals.extractionY = (uiVars.sourceHeight - calcVals.extractionHeight) / 2.0;
+			calcVals.vScale = uiVars.destWidth / uiVars.destAspect / calcVals.extractionHeight;
+			calcVals.vSafety = (uiVars.sourceHeight - calcVals.extractionHeight) / uiVars.sourceHeight * 100.0;
+		}
+		
+		function update_fields() {
+			uiVars.destHeight = Math.round(uiVars.destWidth / uiVars.destAspect);
+
+			calculateValues();
+			
+			for (let [key, value] of Object.entries(uiVars)) {
+				$('#'+key).val(value);
+			}
+			for (let [key, value] of Object.entries(calcVals)) {
+				$('#'+key).text(value.toFixed(5));
+			}
+		}
+		
+		function click_on_pip() {
+		    var value = parseFloat(this.getAttribute('data-value'));
+			if (this.style.left === '100%')
+				value += 0.00001;
+		    safetySlider.noUiSlider.set(value);
+		}
+				
+		function update_slider_range() {
+			minPercentage = 0.0;
+			if (uiVars.destWidth / uiVars.destAspect * uiVars.sourceAspect > uiVars.sourceHeight) {
+				minPercentage = (uiVars.sourceWidth - (uiVars.sourceHeight * uiVars.destAspect / uiVars.sourceAspect)) / uiVars.sourceWidth * 100.0;
+			}
+			
+			maxPercentage = (uiVars.sourceWidth - (uiVars.destWidth / 2.0)) / uiVars.sourceWidth * 100.0
+			$('#saftey-slider-max-label').html((uiVars.sourceAspect != 1.0 ? 'horizontal' : 'pixel') + ' doubling<br>');
+			
+			midPercentage = maxPercentage / 2.0;
+			if ((uiVars.sourceWidth * uiVars.sourceAspect) > uiVars.destWidth) {				
+				midPercentage = (uiVars.sourceWidth - uiVars.destWidth) / uiVars.sourceWidth * 100.0
+			}
+			if (midPercentage < minPercentage) {
+				midPercentage = minPercentage + (maxPercentage - minPercentage) / 2.0;
+			}
+							
+			safetySlider.noUiSlider.updateOptions({
+		        range: {
+		            'min': minPercentage,
+		            'max': maxPercentage
+		        },
+			    pips: {
+			        mode: 'values',
+					values: [minPercentage, midPercentage, maxPercentage-0.00001],
+			        density: 5
+			    }
+	    	});
+
+			var pips = safetySlider.querySelectorAll('.noUi-value');
+
+			for (var i = 0; i < pips.length; i++) {
+			    pips[i].style.cursor = 'pointer';
+			    pips[i].addEventListener('click', click_on_pip);
+			}
+		}
+		
+    </script>
+</head>
+<body onLoad="update_slider_range()">
+	<div class="valueBox">
+	    <fieldset>
+	      <legend>Source</legend>
+			Width <input id="sourceWidth" type="text" class="uiVar"/>
+			Height <input id="sourceHeight" type="text" class="uiVar"/>
+			Pixel Aspect <input id="sourceAspect" type="text" class="uiVar"/>
+		</fieldset>
+	</div>
+	<div class="valueBox">
+	    <fieldset>
+	      <legend>Destination</legend>
+			Framing Aspect Ratio <input id="destAspect" type="text" class="uiVar"/>
+			Width <input id="destWidth" type="text" class="uiVar"/>
+			Height <input id="destHeight" type="text" disabled/>
+		</fieldset>
+	</div>
+    <div id="sliderBox">
+		Percent Safety Margin (Width)
+        <div id="safety-slider"></div>
+        <div id="safety-slider-label">
+			<span id="saftey-slider-min-label">full width</span>
+			<span id="saftey-slider-max-label"></span>
+			<input id="safety-margin"/>
+		</div>
+	    <script>
+			var safetySlider = document.getElementById('safety-slider');
+
+			noUiSlider.create(safetySlider, {
+			    start: [0],
+			    range: {
+			        'min': 0,
+			        'max': 100
+			    },
+			    pips: {
+			        mode: 'values',
+					values: [0, 50, 100],
+			        density: 4
+			    },
+				
+			});
+		
+			var safetyMargin = document.getElementById('safety-margin');
+
+			safetySlider.noUiSlider.on('update', function (values, handle) {
+			    safetyMargin.value = values[handle];
+				update_fields();
+			});
+
+			safetyMargin.addEventListener('change', function () {
+			    safetySlider.noUiSlider.set(this.value);
+				update_fields();
+			});
+			
+			$('.uiVar').on("change", function(){
+				if (this.id.includes('Aspect'))
+					uiVars[this.id] = parseFloat(this.value);
+				else
+					uiVars[this.id] = parseInt(this.value);
+				update_slider_range()
+			})
+		</script>
+	</div>
+	<div id="calculatedValues">
+	    <fieldset style="float: left">
+	      <legend>Extraction Area</legend>
+			Top-left X: <span id="extractionX"></span><br>
+			Top-left Y: <span id="extractionY"></span><br>
+			Width: <span id="extractionWidth"></span><br>
+			Height: <span id="extractionHeight"></span><br>
+			Aspect ratio: <span id="aspectRatio"></span><br>
+	    </fieldset>
+
+	    <fieldset>
+	      <legend>Scaling</legend>
+			Horizontal scale: <span id="hScale"></span><br>
+			Vertical scale: <span id="vScale"></span><br>
+			<br>
+			Horizontal saftey margin (%): <span id="hSafety"></span><br>
+			Vertical saftey margin (%): <span id="vSafety"></span><br>
+	    </fieldset>
+	</div>
+</body>
+</html>
+
