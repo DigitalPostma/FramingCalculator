@@ -1,6 +1,8 @@
 <!doctype HTML>
 <html>
 <head>
+	<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+	<meta content="utf-8" http-equiv="encoding">
     <title>Norville's Frame Chart Calculator</title>
 	<meta name="tagline" content="You know, for kids!">
 	<meta name="author" content="Peter Postma">
@@ -73,16 +75,20 @@
 			margin-left: 1em;
 			padding: 0.2em 0.8em 
 		}
+		#footer {
+			margin: 1.5em;
+			font-size: 0.8em;
+		}
 	</style>
 	
 	<script>
 		let uiVars = {
-		 	sourceWidth: 4448,
-			sourceHeight: 3096,
-			sourceAspect: 2.0,
+		 	sourceWidth: 4096,
+			sourceHeight: 2160,
+			sourceAspect: 1.0,
 		 	destWidth: 4096,
 			destHeight: 0,    //calulated
-			destAspect: 2.31,
+			destAspect: 2.351,
 		};
 		let calcVals = {
 			extractionX: 0,
@@ -169,9 +175,23 @@
 			}
 		}
 		
+		function parseURL()
+		{
+			var queries = window.location.search.replace(/^\?/, '').split('&'), split;
+		    for( var i = 0; i < queries.length; i++ ) {
+		        split = queries[i].split('=');
+				if (split[0] in uiVars)
+					if (split[0].includes('Aspect'))
+						uiVars[split[0]] = parseFloat(split[1]);
+					else
+						uiVars[split[0]] = parseInt(split[1]);
+		    }
+			update_slider_range();
+		}
+		
     </script>
 </head>
-<body onLoad="update_slider_range()">
+<body onLoad="parseURL()">
 	<div class="valueBox">
 	    <fieldset>
 	      <legend>Source</legend>
@@ -252,6 +272,9 @@
 			Horizontal saftey margin (%): <span id="hSafety"></span><br>
 			Vertical saftey margin (%): <span id="vSafety"></span><br>
 	    </fieldset>
+	</div>
+	<div id="footer">
+		Source Code: <a href="https://github.com/DigitalPostma/FramingCalculator">github.com/DigitalPostma/FramingCalculator</a>
 	</div>
 </body>
 </html>
