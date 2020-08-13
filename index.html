@@ -19,7 +19,7 @@
 			font-size: 1em;
 			line-height: 1.5;
 		}
-		input {
+		input[type=text] {
 			font-size: 1em;
 			width: 4em;
 			margin-right: 1em;
@@ -27,7 +27,7 @@
 		.valueBox {
 			padding: 0.5em;
 		}
-		.valueBox fieldset {
+		fieldset {
 			border: 1px black solid;
 			width: 50em;
 			padding: 1em;
@@ -35,7 +35,7 @@
 		#sliderBox {
 			position: relative;
 			padding: 10px 20px 10px 20px;
-			margin: 20px 0;
+			margin: 20px 5px;
 			overflow: hidden;
 			width: 50em;
 		}
@@ -48,11 +48,11 @@
             margin : 0 auto;
 			width: 6em;
 		}
-		#saftey-slider-min-label {
+		#safety-slider-min-label {
 			float: left;
 			color: #999;
 		}
-		#saftey-slider-max-label {
+		#safety-slider-max-label {
 			text-align: right;
 			float: right;
 			color: #999;
@@ -68,7 +68,7 @@
 		}
 		#calculatedValues fieldset {
 			border: 1px black solid;
-			width: 25em;
+			width: 24em;
 		}
 		legend {
 			border: 1px black solid;
@@ -78,6 +78,15 @@
 		#footer {
 			margin: 1.5em;
 			font-size: 0.8em;
+		}
+		#calModeBox {
+			margin-top: 1em;
+		}
+		#calModeBox label {
+			margin-right: 2em;
+		}
+		#heightVariance {
+			color: #F99;
 		}
 	</style>
 	
@@ -101,11 +110,14 @@
 			hSafety: 0,
 			vSafety: 0
 		};
+		subpixelMode = true;
+		evenMode = false;
+		heightVariance = 0.0;
 		
 		function calculateValues() {
-			safteyMargin = parseFloat($('#safety-margin').val()) / 100.0;
+			var safetyMargin = parseFloat($('#safety-margin').val()) / 100.0;
 			
-			calcVals.extractionWidth = uiVars.sourceWidth - (uiVars.sourceWidth * safteyMargin);
+			calcVals.extractionWidth = uiVars.sourceWidth - (uiVars.sourceWidth * safetyMargin);
 			calcVals.extractionX = (uiVars.sourceWidth - calcVals.extractionWidth) / 2.0;
 			calcVals.hScale = uiVars.destWidth / calcVals.extractionWidth;
 			calcVals.hSafety = (uiVars.sourceWidth - calcVals.extractionWidth) / uiVars.sourceWidth * 100.0;
@@ -113,9 +125,18 @@
 			calcVals.aspectRatio = uiVars.destAspect;
 			
 			calcVals.extractionHeight = calcVals.extractionWidth / uiVars.destAspect * uiVars.sourceAspect;
-			calcVals.extractionY = (uiVars.sourceHeight - calcVals.extractionHeight) / 2.0;
 			calcVals.vScale = uiVars.destWidth / uiVars.destAspect / calcVals.extractionHeight;
 			calcVals.vSafety = (uiVars.sourceHeight - calcVals.extractionHeight) / uiVars.sourceHeight * 100.0;
+			heightVariance = 0.0
+			if (!subpixelMode) {
+				var newHeight = Math.round(calcVals.extractionHeight);
+				if (evenMode)
+					newHeight = 2 * Math.round(calcVals.extractionHeight / 2);					
+				heightVariance = calcVals.extractionHeight - newHeight;
+				calcVals.extractionHeight = newHeight;
+				calcVals.aspectRatio = calcVals.extractionWidth * uiVars.sourceAspect / calcVals.extractionHeight;
+			}
+			calcVals.extractionY = (uiVars.sourceHeight - calcVals.extractionHeight) / 2.0;
 		}
 		
 		function update_fields() {
@@ -127,39 +148,80 @@
 				$('#'+key).val(value);
 			}
 			for (let [key, value] of Object.entries(calcVals)) {
-				$('#'+key).text(value.toFixed(5));
+				var precision = 5
+				if (!subpixelMode && String(key).startsWith('extraction')) {
+					precision = (key === 'extractionX' || key === 'extractionY') ? 1 : 0; 
+				}
+				$('#'+key).text(value.toFixed(precision));
+			}
+			if (heightVariance != 0.0) {
+				$('#heightVariance').text( ((heightVariance > 0) ? '+' : '') + heightVariance.toFixed(5) );
+			} else {
+				$('#heightVariance').text('');
 			}
 		}
 		
 		function click_on_pip() {
 		    var value = parseFloat(this.getAttribute('data-value'));
-			if (this.style.left === '100%')
+			if (parseFloat(this.style.left) > 99)
 				value += 0.00001;
 		    safetySlider.noUiSlider.set(value);
 		}
-				
+
 		function update_slider_range() {
-			minPercentage = 0.0;
+			var minPercentage = 0.0;
+			var minWidth = uiVars.sourceWidth;
 			if (uiVars.destWidth / uiVars.destAspect * uiVars.sourceAspect > uiVars.sourceHeight) {
-				minPercentage = (uiVars.sourceWidth - (uiVars.sourceHeight * uiVars.destAspect / uiVars.sourceAspect)) / uiVars.sourceWidth * 100.0;
+				minWidth = (uiVars.sourceHeight * uiVars.destAspect / uiVars.sourceAspect);
+				if (!subpixelMode) {
+					minWidth = Math.floor(minWidth);
+					if (evenMode && minWidth % 2 != 0)
+						minWidth--
+				}
+				minPercentage =  (uiVars.sourceWidth - minWidth) / uiVars.sourceWidth * 100.0;
 			}
 			
-			maxPercentage = (uiVars.sourceWidth - (uiVars.destWidth / 2.0)) / uiVars.sourceWidth * 100.0
-			$('#saftey-slider-max-label').html((uiVars.sourceAspect != 1.0 ? 'horizontal' : 'pixel') + ' doubling<br>');
+			// First allow max at pixel doubling, but if that's more than 20% difference limit it to 20% to make slider usable
+			var maxPercentage = (uiVars.sourceWidth - (uiVars.destWidth / 2.0)) / uiVars.sourceWidth * 100.0
+			if (maxPercentage > minPercentage + 20.0) {
+				maxPercentage = minPercentage + 20.0
+				$('#safety-slider-max-label').html('<br>');
+			} else {
+				$('#safety-slider-max-label').html((uiVars.sourceAspect != 1.0 ? 'horizontal' : 'pixel') + ' doubling<br>');
+			}
+			var maxWidth = (1.0 - (maxPercentage / 100.0)) * uiVars.sourceWidth;
+			if (!subpixelMode) {
+				maxWidth = Math.round(maxWidth);
+				if (evenMode) {
+					maxWidth = 2 * Math.round(maxWidth / 2);
+				}
+				maxPercentage = (uiVars.sourceWidth - maxWidth) / uiVars.sourceWidth * 100.0;
+			}
 			
-			midPercentage = maxPercentage / 2.0;
+			var midPercentage = maxPercentage / 2.0;
 			if ((uiVars.sourceWidth * uiVars.sourceAspect) > uiVars.destWidth) {				
 				midPercentage = (uiVars.sourceWidth - uiVars.destWidth) / uiVars.sourceWidth * 100.0
 			}
 			if (midPercentage < minPercentage) {
 				midPercentage = minPercentage + (maxPercentage - minPercentage) / 2.0;
 			}
-							
+
+	        let sliderRange = {
+	            'min': minPercentage,
+	            'max': maxPercentage
+	        }
+			if (!subpixelMode) {
+				var steps = minWidth-maxWidth;
+				var interval = (maxPercentage - minPercentage) / steps;
+				for ( var i = (evenMode) ? 2 : 1; i < steps; (evenMode) ? i = i + 2 : i++) {
+					var key = (i * (100.0 / steps)) + '%';
+					sliderRange[key] = (1.0 - ((minWidth - i) / uiVars.sourceWidth)) * 100.0;
+				}
+			}
+
 			safetySlider.noUiSlider.updateOptions({
-		        range: {
-		            'min': minPercentage,
-		            'max': maxPercentage
-		        },
+		        range: sliderRange,
+				snap: (!subpixelMode),
 			    pips: {
 			        mode: 'values',
 					values: [minPercentage, midPercentage, maxPercentage-0.00001],
@@ -175,23 +237,73 @@
 			}
 		}
 		
-		function parseURL()
-		{
+		function parse_URL() {
 			var queries = window.location.search.replace(/^\?/, '').split('&'), split;
+			var safetyMargin = 0;
 		    for( var i = 0; i < queries.length; i++ ) {
 		        split = queries[i].split('=');
-				if (split[0] in uiVars)
+				if (split[0] in uiVars) {
 					if (split[0].includes('Aspect'))
 						uiVars[split[0]] = parseFloat(split[1]);
 					else
 						uiVars[split[0]] = parseInt(split[1]);
+				} else if (split[0] === 'mode') {
+					if (split[1] === 'single') {
+						subpixelMode = false;
+						$('#calcMode_Subpixel').prop('checked',false);
+						$('#calcMode_Singlepixel').prop('checked',true);
+					}
+					if (split[1] === 'double') {
+						evenMode = true;
+						subpixelMode = false;
+						$('#calcMode_Subpixel').prop('checked',false);
+						$('#calcMode_Doublepixel').prop('checked',true);
+					}
+				} else if (split[0] === 'safetyMargin') {
+					safetyMargin = split[1];
+				} else {
+					
+				}
 		    }
 			update_slider_range();
+			if (safetyMargin != 0)
+				$('#safety-margin').val(safetyMargin).change();
+
+		}
+		
+		const copyToClipboard = str => {
+			const el = document.createElement('textarea');
+			el.value = str;
+			el.setAttribute('readonly', '');
+			el.style.position = 'absolute';
+			el.style.left = '-9999px';
+			document.body.appendChild(el);
+			const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false;
+			el.select();
+			document.execCommand('copy');
+			document.body.removeChild(el);
+			if (selected) {
+				document.getSelection().removeAllRanges();
+				document.getSelection().addRange(selected);
+			}
+		};
+		
+		function make_link() {
+			var url = window.location.href.split('?')[0] + '?';
+			for (let [key, value] of Object.entries(uiVars)) {
+				url += key + '=' + value + '&';
+			}
+			if (evenMode)
+				url += 'mode=double&';
+			else if (!subpixelMode)
+				url += 'mode=single&';
+			url += 'safetyMargin=' + $('#safety-margin').val();
+			copyToClipboard(url);
 		}
 		
     </script>
 </head>
-<body onLoad="parseURL()">
+<body onLoad="parse_URL()">
 	<div class="valueBox">
 	    <fieldset>
 	      <legend>Source</legend>
@@ -203,7 +315,7 @@
 	<div class="valueBox">
 	    <fieldset>
 	      <legend>Destination</legend>
-			Framing Aspect Ratio <input id="destAspect" type="text" class="uiVar"/>
+			Framing Aspect Ratio <input id="destAspect" type="text" class="uiVar" style="margin-right: 0em"/><span style="margin-right:1em">:1</span>
 			Width <input id="destWidth" type="text" class="uiVar"/>
 			Height <input id="destHeight" type="text" disabled/>
 		</fieldset>
@@ -212,9 +324,9 @@
 		Percent Safety Margin (Width)
         <div id="safety-slider"></div>
         <div id="safety-slider-label">
-			<span id="saftey-slider-min-label">full width</span>
-			<span id="saftey-slider-max-label"></span>
-			<input id="safety-margin"/>
+			<span id="safety-slider-min-label">full width</span>
+			<span id="safety-slider-max-label"></span>
+			<input id="safety-margin" type="text"/>
 		</div>
 	    <script>
 			var safetySlider = document.getElementById('safety-slider');
@@ -232,15 +344,13 @@
 			    },
 				
 			});
-		
-			var safetyMargin = document.getElementById('safety-margin');
 
 			safetySlider.noUiSlider.on('update', function (values, handle) {
-			    safetyMargin.value = values[handle];
+			    $('#safety-margin').val(values[handle]);
 				update_fields();
 			});
 
-			safetyMargin.addEventListener('change', function () {
+			$('#safety-margin').on('change', function () {
 			    safetySlider.noUiSlider.set(this.value);
 				update_fields();
 			});
@@ -260,7 +370,7 @@
 			Top-left X: <span id="extractionX"></span><br>
 			Top-left Y: <span id="extractionY"></span><br>
 			Width: <span id="extractionWidth"></span><br>
-			Height: <span id="extractionHeight"></span><br>
+			Height: <span id="extractionHeight"></span> <span id="heightVariance"></span><br>
 			Aspect ratio: <span id="aspectRatio"></span><br>
 	    </fieldset>
 
@@ -269,13 +379,37 @@
 			Horizontal scale: <span id="hScale"></span><br>
 			Vertical scale: <span id="vScale"></span><br>
 			<br>
-			Horizontal saftey margin (%): <span id="hSafety"></span><br>
-			Vertical saftey margin (%): <span id="vSafety"></span><br>
+			Horizontal safety margin (%): <span id="hSafety"></span><br>
+			Vertical safety margin (%): <span id="vSafety"></span><br>
 	    </fieldset>
 	</div>
+	<div id="calModeBox">
+	    <fieldset>
+			<legend>Extraction Rounding Mode</legend>
+			<form id="calcModeRadioBox">
+				<input type="radio" name="calcMode" id="calcMode_Subpixel" value="Subpixel" CHECKED/><label for="calcMode_Subpixel">Subpixel </label>
+				<input type="radio" name="calcMode" id="calcMode_Singlepixel" value="Singlepixel"/><label for="calcMode_Singlepixel">Whole pixel</label>
+				<input type="radio" name="calcMode" id="calcMode_Doublepixel" value="Doublepixel"/><label for="calcMode_Doublepixel">Even pixel</label>
+			</form>
+		</fieldset>
+	</div>
 	<div id="footer">
+		<input type="button" id="makeLink" value="Copy Settings to Link" style="margin-right: 5em">
 		Source Code: <a href="https://github.com/DigitalPostma/FramingCalculator">github.com/DigitalPostma/FramingCalculator</a>
 	</div>
+	<script>
+		$(document).ready(function(){
+			$('#calcModeRadioBox').change( function() {
+				var mode = $("input[name='calcMode']:checked").val();
+				subpixelMode = (mode === "Subpixel");
+				evenMode = (mode === "Doublepixel");
+				update_slider_range();
+			});
+			$('#makeLink').click( function() {
+				make_link();
+			});
+		})
+	</script>
 </body>
 </html>
 
