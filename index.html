@@ -232,7 +232,7 @@
 				minPercentage =  (uiVars.sourceWidth - minWidth) / uiVars.sourceWidth * 100.0;
 			}
 			
-			// First allow max at pixel doubling, but if that's more than 25% more than min limit it to 25% to make slider usable
+			// Keep slide to usable range (not to sensitive and withing realistic bounds)
 			var maxPercentage = ( minPercentage < 50.0 ) ? 50.0 : minPercentage + 20;
 			if (maxPercentage > 99.0)
 				maxPercentage = 99.0
@@ -433,7 +433,7 @@
 	</div>
 	<script>
 		$(document).ready(function(){
-			// Setup canvas for high DPI displaus
+			// Setup canvas for high DPI displays
 			var canvas = document.getElementById('framelineCanvas');
 			var dpr = window.devicePixelRatio || 1;
 			var rect = canvas.getBoundingClientRect();
