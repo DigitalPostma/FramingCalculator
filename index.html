@@ -24,17 +24,21 @@
 			width: 4em;
 			margin-right: 1em;
 		}
-		.valueBox {
-			padding: 0.5em;
-		}
 		fieldset {
 			border: 1px black solid;
 			width: 50em;
 			padding: 1em;
 		}
+		#sourceBox {
+			padding: 0.5em;
+		}
+		#destAspect {
+			margin-right: 0em;
+			margin-top: 0.6em
+		}
 		#sliderBox {
 			position: relative;
-			padding: 10px 20px 10px 20px;
+			padding: 5px 20px 10px 20px;
 			margin: 20px 5px;
 			overflow: hidden;
 			width: 50em;
@@ -171,7 +175,7 @@
 		function update_slider_range() {
 			var minPercentage = 0.0;
 			var minWidth = uiVars.sourceWidth;
-			if (uiVars.destWidth / uiVars.destAspect * uiVars.sourceAspect > uiVars.sourceHeight) {
+			if ((uiVars.destWidth < uiVars.sourceWidth) && (uiVars.destWidth / uiVars.destAspect * uiVars.sourceAspect > uiVars.sourceHeight)) {
 				minWidth = (uiVars.sourceHeight * uiVars.destAspect / uiVars.sourceAspect);
 				if (!subpixelMode) {
 					minWidth = Math.floor(minWidth);
@@ -181,10 +185,10 @@
 				minPercentage =  (uiVars.sourceWidth - minWidth) / uiVars.sourceWidth * 100.0;
 			}
 			
-			// First allow max at pixel doubling, but if that's more than 20% difference limit it to 20% to make slider usable
+			// First allow max at pixel doubling, but if that's more than 20% difference limit it to 25% to make slider usable
 			var maxPercentage = (uiVars.sourceWidth - (uiVars.destWidth / 2.0)) / uiVars.sourceWidth * 100.0
-			if (maxPercentage > minPercentage + 20.0) {
-				maxPercentage = minPercentage + 20.0
+			if (maxPercentage > minPercentage + 25.0) {
+				maxPercentage = minPercentage + 25.0
 				$('#safety-slider-max-label').html('<br>');
 			} else {
 				$('#safety-slider-max-label').html((uiVars.sourceAspect != 1.0 ? 'horizontal' : 'pixel') + ' doubling<br>');
@@ -304,20 +308,13 @@
     </script>
 </head>
 <body onLoad="parse_URL()">
-	<div class="valueBox">
+	<div id="sourceBox">
 	    <fieldset>
 	      <legend>Source</legend>
 			Width <input id="sourceWidth" type="text" class="uiVar"/>
 			Height <input id="sourceHeight" type="text" class="uiVar"/>
-			Pixel Aspect <input id="sourceAspect" type="text" class="uiVar"/>
-		</fieldset>
-	</div>
-	<div class="valueBox">
-	    <fieldset>
-	      <legend>Destination</legend>
-			Framing Aspect Ratio <input id="destAspect" type="text" class="uiVar" style="margin-right: 0em"/><span style="margin-right:1em">:1</span>
-			Width <input id="destWidth" type="text" class="uiVar"/>
-			Height <input id="destHeight" type="text" disabled/>
+			Pixel Aspect <input id="sourceAspect" type="text" class="uiVar"/><br>
+			Framing Aspect Ratio <input id="destAspect" type="text" class="uiVar"/><span style="margin-right: 1em">:1</span>
 		</fieldset>
 	</div>
     <div id="sliderBox">
@@ -344,43 +341,28 @@
 			    },
 				
 			});
-
-			safetySlider.noUiSlider.on('update', function (values, handle) {
-			    $('#safety-margin').val(values[handle]);
-				update_fields();
-			});
-
-			$('#safety-margin').on('change', function () {
-			    safetySlider.noUiSlider.set(this.value);
-				update_fields();
-			});
-			
-			$('.uiVar').on("change", function(){
-				if (this.id.includes('Aspect'))
-					uiVars[this.id] = parseFloat(this.value);
-				else
-					uiVars[this.id] = parseInt(this.value);
-				update_slider_range()
-			})
 		</script>
 	</div>
 	<div id="calculatedValues">
 	    <fieldset style="float: left">
 	      <legend>Extraction Area</legend>
 			Top-left X: <span id="extractionX"></span><br>
-			Top-left Y: <span id="extractionY"></span><br>
+			Top-left Y: <span id="extractionY"></span><br><br>
 			Width: <span id="extractionWidth"></span><br>
-			Height: <span id="extractionHeight"></span> <span id="heightVariance"></span><br>
+			Height: <span id="extractionHeight"></span> <span id="heightVariance"></span><br><br>
 			Aspect ratio: <span id="aspectRatio"></span><br>
 	    </fieldset>
-
 	    <fieldset>
-	      <legend>Scaling</legend>
+	      <legend>Safety Margin</legend>
+			Horizontal (%): <span id="hSafety"></span><br>
+			Vertical (%): <span id="vSafety"></span><br>
+		</fieldset>
+		<fieldset style="margin-top: 0.5em">
+  	      <legend>Resized Output</legend>	
+  			Width <input id="destWidth" type="text" class="uiVar"/>
+  			Height <input id="destHeight" type="text" disabled/><br>
 			Horizontal scale: <span id="hScale"></span><br>
 			Vertical scale: <span id="vScale"></span><br>
-			<br>
-			Horizontal safety margin (%): <span id="hSafety"></span><br>
-			Vertical safety margin (%): <span id="vSafety"></span><br>
 	    </fieldset>
 	</div>
 	<div id="calModeBox">
@@ -399,12 +381,36 @@
 	</div>
 	<script>
 		$(document).ready(function(){
+			// Handle clicks on numbers below sider
+			safetySlider.noUiSlider.on('update', function (values, handle) {
+			    $('#safety-margin').val(values[handle]);
+				update_fields();
+			});
+
+			// Handle updates to text box for sider
+			$('#safety-margin').on('change', function () {
+			    safetySlider.noUiSlider.set(this.value);
+				update_fields();
+			});
+			
+			// Handle updates to other text box input
+			$('.uiVar').on("change", function(){
+				if (this.id.includes('Aspect'))
+					uiVars[this.id] = parseFloat(this.value);
+				else
+					uiVars[this.id] = parseInt(this.value);
+				update_slider_range()
+			})
+			
+			// Handle changed to radio buttons
 			$('#calcModeRadioBox').change( function() {
 				var mode = $("input[name='calcMode']:checked").val();
 				subpixelMode = (mode === "Subpixel");
 				evenMode = (mode === "Doublepixel");
 				update_slider_range();
 			});
+			
+			// Make a link when the button is clicked
 			$('#makeLink').click( function() {
 				make_link();
 			});
