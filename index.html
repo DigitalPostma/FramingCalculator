@@ -86,6 +86,7 @@
 		}
 		#calModeBox {
 			margin-top: 1em;
+			line-height: 1.9em;
 		}
 		#calModeBox label {
 			margin-right: 2em;
@@ -127,8 +128,9 @@
 			hSafety: 0,
 			vSafety: 0
 		};
-		let subpixelMode = true;
-		let evenMode = false;
+		let subpixelMode = false;
+		let evenMode = true;
+		let fitHeight = false;
 		let heightVariance = 0.0;
 		var ctx;
 		
@@ -137,13 +139,11 @@
 			
 			calcVals.extractionWidth = uiVars.sourceWidth - (uiVars.sourceWidth * safetyMargin);
 			calcVals.extractionX = (uiVars.sourceWidth - calcVals.extractionWidth) / 2.0;
-			calcVals.hScale = uiVars.destWidth / calcVals.extractionWidth;
 			calcVals.hSafety = (uiVars.sourceWidth - calcVals.extractionWidth) / uiVars.sourceWidth * 100.0;
-			
+
 			calcVals.aspectRatio = uiVars.destAspect;
 			
 			calcVals.extractionHeight = calcVals.extractionWidth / uiVars.destAspect * uiVars.sourceAspect;
-			calcVals.vScale = uiVars.destWidth / uiVars.destAspect / calcVals.extractionHeight;
 			calcVals.vSafety = (uiVars.sourceHeight - calcVals.extractionHeight) / uiVars.sourceHeight * 100.0;
 			heightVariance = 0.0
 			if (!subpixelMode) {
@@ -155,6 +155,37 @@
 				calcVals.aspectRatio = calcVals.extractionWidth * uiVars.sourceAspect / calcVals.extractionHeight;
 			}
 			calcVals.extractionY = (uiVars.sourceHeight - calcVals.extractionHeight) / 2.0;
+			
+			if (!subpixelMode) {
+				uiVars.destWidth = Math.round(uiVars.destWidth);
+				uiVars.destHeight = Math.round(uiVars.destHeight);
+				calcVals.extractionWidth = Math.round(calcVals.extractionWidth);
+			}
+			
+			/* This method could be used to always make sure the final scaled image is 100% covered by
+			   extraction area, switching between "fit width" and "fit height" as needed
+			calcVals.hScale =  uiVars.destWidth / calcVals.extractionWidth;
+			if (calcVals.hScale / uiVars.sourceAspect * calcVals.extractionHeight < uiVars.destHeight) {
+				// fit height
+				calcVals.vScale = uiVars.destHeight / uiVars.destAspect / calcVals.extractionHeight;
+				calcVals.hScale = uiVars.destHeight / uiVars.destAspect * uiVars.sourceAspect / calcVals.extractionWidth;
+				$('#hScale').css('color', 'black');
+				$('#vScale').css('color', 'blue');
+			} else {
+				// fit width
+				calcVals.vScale = calcVals.hScale / uiVars.sourceAspect;
+				$('#hScale').css('color', 'blue');
+				$('#vScale').css('color', 'black');
+			}
+			*/
+			
+			if (fitHeight) {
+				calcVals.vScale = uiVars.destHeight / calcVals.extractionHeight;
+				calcVals.hScale = calcVals.vScale * uiVars.sourceAspect;
+			} else {
+				calcVals.hScale = uiVars.destWidth / calcVals.extractionWidth;
+				calcVals.vScale = calcVals.hScale / uiVars.sourceAspect;
+			}
 		}
 		
 		
@@ -225,7 +256,7 @@
 			if (uiVars.sourceHeight * uiVars.destAspect / uiVars.sourceAspect < minWidth) {
 				minWidth = (uiVars.sourceHeight * uiVars.destAspect / uiVars.sourceAspect);
 				if (!subpixelMode) {
-					minWidth = Math.floor(minWidth);
+					minWidth = Math.round(minWidth);
 					if (evenMode && minWidth % 2 != 0)
 						minWidth--
 				}
@@ -303,17 +334,18 @@
 				} else if (split[0] === 'mode') {
 					if (split[1] === 'single') {
 						subpixelMode = false;
-						$('#calcMode_Subpixel').prop('checked',false);
 						$('#calcMode_Singlepixel').prop('checked',true);
 					}
 					if (split[1] === 'double') {
 						evenMode = true;
 						subpixelMode = false;
-						$('#calcMode_Subpixel').prop('checked',false);
 						$('#calcMode_Doublepixel').prop('checked',true);
 					}
 				} else if (split[0] === 'safetyMargin') {
 					safetyMargin = split[1];
+				} else if (split[0] === 'fitHeight' && split[1] === '1') {
+					fitHeight = true;
+					$('#calcMode_Height').prop('checked',true);
 				}
 		    }
 			update_slider_range();
@@ -348,6 +380,8 @@
 				url += 'mode=double&';
 			else if (!subpixelMode)
 				url += 'mode=single&';
+			if (fitHeight)
+				url += 'fitHeight=1&';
 			url += 'safetyMargin=' + $('#safety-margin').val();
 			copyToClipboard(url);
 		}
@@ -416,11 +450,16 @@
 	</div>
 	<div id="calModeBox">
 	    <fieldset>
-			<legend>Extraction Rounding Mode</legend>
+			<legend>Calculation Modes</legend>
 			<form id="calcModeRadioBox">
-				<input type="radio" name="calcMode" id="calcMode_Subpixel" value="Subpixel" CHECKED/><label for="calcMode_Subpixel">Subpixel </label>
+				Extraction Rounding :
+				<input type="radio" name="calcMode" id="calcMode_Subpixel" value="Subpixel"/><label for="calcMode_Subpixel">Subpixel </label>
 				<input type="radio" name="calcMode" id="calcMode_Singlepixel" value="Singlepixel"/><label for="calcMode_Singlepixel">Whole pixel</label>
-				<input type="radio" name="calcMode" id="calcMode_Doublepixel" value="Doublepixel"/><label for="calcMode_Doublepixel">Even pixel</label>
+				<input type="radio" name="calcMode" id="calcMode_Doublepixel" value="Doublepixel" CHECKED/><label for="calcMode_Doublepixel">Even pixel</label>
+				<br>
+				Scaling :
+				<input type="radio" name="scalingMode" id="calcMode_Width" value="Width" CHECKED/><label for="calcMode_Width">Fit Width</label>
+				<input type="radio" name="scalingMode" id="calcMode_Height" value="Height"/><label for="calcMode_Height">Fit Height</label>			
 			</form>
 		</fieldset>
 	</div>
@@ -465,6 +504,10 @@
 				var mode = $("input[name='calcMode']:checked").val();
 				subpixelMode = (mode === "Subpixel");
 				evenMode = (mode === "Doublepixel");
+				
+				var mode = $("input[name='scalingMode']:checked").val();
+				fitHeight =  (mode === "Height");
+				
 				update_slider_range();
 			});
 			
