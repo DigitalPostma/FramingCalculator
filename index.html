@@ -41,6 +41,12 @@
 			margin-right: 0em;
 			margin-bottom: 0.6em
 		}
+		.fit-to-menu {
+			margin-left: 10em;
+			border: 1px solid black;
+			padding: 0.2em 0.8em;
+			background: #EEE;
+		}
 		#sliderBox {
 			position: relative;
 			padding: 5px 20px 5px 20px;
@@ -153,14 +159,16 @@
 			border-left: 0.6em solid transparent;
 			border-right: 0.6em solid transparent;
 			border-top: 0.6em solid #888;
-			margin-left: -2.6em;
 			top: -0.2em;
 			position: relative;
 			z-index: 99;
 		}
+		.inside-input {
+			margin-left: -2.6em;
+		}
 	</style>
 	
-	<script>
+	<script>		
 		let uiVars = {
 		 	sourceWidth: 4096,
 			sourceHeight: 2160,
@@ -333,8 +341,8 @@
 			var maxPercentage = ( minPercentage < 50.0 ) ? 50.0 : minPercentage + 20;
 			if (maxPercentage > 99.0)
 				maxPercentage = 99.0
-			if (maxPercentage > minPercentage + 25.0) {
-				maxPercentage = minPercentage + 25.0
+			if (maxPercentage > minPercentage + 30.0) {
+				maxPercentage = minPercentage + 30.0
 				$('#safety-slider-max-label').html('<br>');
 			} else {
 				$('#safety-slider-max-label').html((uiVars.sourceAspect != 1.0 ? 'horizontal' : 'pixel') + ' doubling<br>');
@@ -391,26 +399,29 @@
 			var queries = window.location.search.replace(/^\?/, '').split('&'), split;
 		    for( var i = 0; i < queries.length; i++ ) {
 		        split = queries[i].split('=');
-				if (split[0] in uiVars) {
-					if (split[0].includes('Aspect'))
-						uiVars[split[0]] = parseFloat(split[1]);
-					else
-						uiVars[split[0]] = parseInt(split[1]);
-				} else if (split[0].slice(0, 5) === 'frame') {
-					var num = parseInt(split[0].slice(5, 6));
-					if (num > -1 && num < 4) {
-						if (split[0].slice(7) === 'aspect') {
-							frameVars[num].destAspect = parseFloat(split[1]);
-						} else if (split[0].slice(7) === 'margin') {
-							frameVars[num].safetyMargin = parseFloat(split[1]);
-						}
+				if (split[0] === 'vars') {
+					vars = split[1].split('_');
+					if (vars.length < 12)
+						break;
+					uiVars.sourceWidth = parseInt(vars[0]);
+					uiVars.sourceHeight = parseInt(vars[1]);
+					uiVars.sourceAspect = parseFloat(vars[2]);
+					uiVars.destWidth = parseInt(vars[3]);
+					var x = 4;
+					for (var y = 0; y < 4; y++) {
+						frameVars[y].destAspect = parseFloat(vars[x++]);
+						frameVars[y].safetyMargin = parseFloat(vars[x++]);
 					}
+				} else if (split[0] === 'tabs') {
+					vars = split[1].split(',');
+					if (vars.length == 4)
+						for (var y = 0; y < 4; y++)
+							$('#tab-' + y).text(decodeURIComponent(vars[y]));
 				} else if (split[0] === 'mode') {
 					if (split[1] === 'single') {
 						subpixelMode = false;
 						$('#calcMode_Singlepixel').prop('checked',true);
-					}
-					if (split[1] === 'double') {
+					} else if (split[1] === 'double') {
 						evenMode = true;
 						subpixelMode = false;
 						$('#calcMode_Doublepixel').prop('checked',true);
@@ -460,15 +471,16 @@
 		};
 		
 		function make_link() {
-			var url = window.location.href.split('?')[0] + '?';
-			for (let [key, value] of Object.entries(uiVars)) {
-				url += key + '=' + value + '&';
-			}
+			store_frame_values();
 			
-			store_frame_values();				
-			for (var i = 0; i < 4; i++) {
-				url += 'frame' + i + '_aspect=' + frameVars[i].destAspect + '&' + 'frame' + i + '_margin=' + frameVars[i].safetyMargin + '&';
-			}
+			var url = window.location.href.split('?')[0] + '?';
+			url += 'vars=' + uiVars.sourceWidth + '_' + uiVars.sourceHeight + '_' + uiVars.sourceAspect + '_' + uiVars.destWidth;
+			for (var i = 0; i < 4; i++)
+				url +=  '_' + frameVars[i].destAspect + '_' + frameVars[i].safetyMargin;
+			url += '&tabs=';
+			for (var i = 0; i < 4; i++)
+				url += encodeURIComponent($('#tab-' + i).text()) + ',';
+			url = url.replace(/.$/,"&");
 			
 			if (evenMode)
 				url += 'mode=double&';
@@ -488,7 +500,7 @@
 			Width <input id="sourceWidth" type="text" class="uiVar"/>
 			Height <input id="sourceHeight" type="text" class="uiVar"/>
 			Source Aspect <input id="sourceAspect" type="text" class="uiVar"/>		
-			<span class="arrow-down source-aspect-menu"></span>
+			<span class="arrow-down inside-input source-aspect-menu"></span>
 			<script>
 				$(function(){
 				    $.contextMenu({
@@ -522,9 +534,69 @@
 		<li class="tab-link" id="tab-2">Frame Three</li>
 		<li class="tab-link" id="tab-3">Frame Four</li>
 	</ul>
+	<script>
+		var oriVal;
+		$('.tabs').on('dblclick', 'li', function () {
+		    oriVal = $(this).text();
+		    $(this).text('');
+		    $("<input type='text' class='tab-name'>").appendTo(this).focus();
+		});
+		$('.tabs').on('focusout', 'li > input', function () {
+		    var $this = $(this);
+		    $this.parent().text($this.val() || oriVal);
+		    $this.remove();
+		});
+		jQuery(document).on('keydown', 'input.tab-name', function(ev) {
+		    if(ev.key === 'Enter')
+				$(':focus').blur();
+		});
+	</script>
 	
     <div id="sliderBox">
-		<div>Framing Aspect Ratio <input id="destAspect" type="text" class="uiVar"/><span style="margin-right: 1em">:1</span></div>
+		<div>Framing Aspect Ratio <input id="destAspect" type="text" class="uiVar"/><span style="margin-right: 1em">:1</span>
+		<span class="fit-to-menu">Fit to <span class="arrow-down"></span></span></div>
+		<script>
+			$(function(){
+			    $.contextMenu({
+			        selector: '.fit-to-menu', 
+			        trigger: 'left',
+				    position:  function(opt,  x,  y)  {
+				      opt.$menu.position({
+				        my:  'center top',
+				        at:  'center bottom',
+				        of:  opt.$trigger,
+				      });
+				    },
+				    build: function($triggerElement, e){
+				        return {
+					        callback: function(key, options) {
+								if (key == 0) {
+									fitToWidth = uiVars.sourceWidth;
+									fitToHeight = uiVars.sourceHeight;
+								} else {
+									key--;
+									vals = calculate_values(frameVars[key].destAspect, frameVars[key].safetyMargin / 100.0);
+									fitToWidth = vals.extractionWidth;
+									fitToHeight = vals.extractionHeight;
+								}
+								if ( fitToHeight * uiVars.destAspect / uiVars.sourceAspect <= fitToWidth )
+									safetyMargin = (uiVars.sourceWidth - fitToHeight * uiVars.destAspect / uiVars.sourceAspect) / uiVars.sourceWidth;
+								else
+									safetyMargin = (uiVars.sourceWidth - fitToWidth) / uiVars.sourceWidth;
+								$('#safety-margin').val(safetyMargin * 100.0).change();
+					        },
+				            items: {
+					            "0": {name: "Source"},
+					            "1": {name: $('#tab-0').text(), disabled: function(key) { return (currentFrameTab == --key)} },
+					            "2": {name: $('#tab-1').text(), disabled: function(key) { return (currentFrameTab == --key)} },
+								"3": {name: $('#tab-2').text(), disabled: function(key) { return (currentFrameTab == --key)} },
+								"4": {name: $('#tab-3').text(), disabled: function(key) { return (currentFrameTab == --key)} }
+				            }
+				        };
+				    }
+			    });
+			});
+		</script>
 		Percent Safety Margin (Width)
         <div id="safety-slider"></div>
         <div id="safety-slider-label">
@@ -566,7 +638,7 @@
 		<fieldset style="margin-top: 0.5em">
   	      <legend>Resized Output</legend>	
   			Width <input id="destWidth" type="text" class="uiVar"/>
-			<span class="arrow-down destWidth-menu"></span>
+			<span class="arrow-down inside-input destWidth-menu"></span>
 			<script>
 				$(function(){
 				    $.contextMenu({
@@ -665,7 +737,7 @@
 				evenMode = (mode === "Doublepixel");
 				
 				var mode = $("input[name='scalingMode']:checked").val();
-				fitHeight =  (mode === "Height");
+				fitHeight = (mode === "Height");
 				
 				update_slider_range();
 			});
