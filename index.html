@@ -3,7 +3,7 @@
 <head>
 	<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
 	<meta content="utf-8" http-equiv="encoding">
-    <title>Norville's Frame Chart Calculator</title>
+	<title>Norville's Frame Chart Calculator</title>
 	<meta name="tagline" content="You know, for kids!">
 	<meta name="author" content="Peter Postma">
 	<meta name="revised" content="September 3, 2020, 11:56pm">
@@ -60,8 +60,8 @@
 			width: 100%;
 		}
 		#safety-slider-label input {
-            display: block;
-            margin : 0 auto;
+			display: block;
+			margin : 0 auto;
 			width: 6em;
 		}
 		#safety-slider-min-label {
@@ -111,12 +111,12 @@
 			margin-top: 1em;
 		}
 		#framelineCanvas {
-		    padding-left: 0;
-		    padding-right: 0;
-		    margin-left: auto;
-		    margin-right: auto;
-		    display: block;
-		    width: 90%;
+			padding-left: 0;
+			padding-right: 0;
+			margin-left: auto;
+			margin-right: auto;
+			display: block;
+			width: 90%;
 		}
 		ul.tabs{
 			margin: 0px;
@@ -174,7 +174,7 @@
 			sourceHeight: 2160,
 			sourceAspect: 1.0,
 		 	destWidth: 4096,
-			destHeight: 0,    //calulated
+			destHeight: 0,	//calulated
 			destAspect: 2.351
 		};
 		let frameVars = [
@@ -318,10 +318,10 @@
 		}
 		
 		function click_on_pip() {
-		    var value = parseFloat(this.getAttribute('data-value'));
+			var value = parseFloat(this.getAttribute('data-value'));
 			if (parseFloat(this.style.left) > 99)
 				value += 0.00001;
-		    safetySlider.noUiSlider.set(value);
+			safetySlider.noUiSlider.set(value);
 		}
 
 		function update_slider_range() {
@@ -364,10 +364,10 @@
 				midPercentage = minPercentage + (maxPercentage - minPercentage) / 2.0;
 			}
 
-	        let sliderRange = {
-	            'min': minPercentage,
-	            'max': maxPercentage
-	        }
+			let sliderRange = {
+				'min': minPercentage,
+				'max': maxPercentage
+			}
 			if (!subpixelMode) {
 				var steps = minWidth-maxWidth;
 				var interval = (maxPercentage - minPercentage) / steps;
@@ -378,27 +378,27 @@
 			}
 
 			safetySlider.noUiSlider.updateOptions({
-		        range: sliderRange,
+				range: sliderRange,
 				snap: (!subpixelMode),
-			    pips: {
-			        mode: 'values',
+				pips: {
+					mode: 'values',
 					values: [minPercentage, midPercentage, maxPercentage-0.00001],
-			        density: 5
-			    }
-	    	});
+					density: 5
+				}
+			});
 
 			var pips = safetySlider.querySelectorAll('.noUi-value');
 
 			for (var i = 0; i < pips.length; i++) {
-			    pips[i].style.cursor = 'pointer';
-			    pips[i].addEventListener('click', click_on_pip);
+				pips[i].style.cursor = 'pointer';
+				pips[i].addEventListener('click', click_on_pip);
 			}
 		}
 		
 		function parse_URL() {
 			var queries = window.location.search.replace(/^\?/, '').split('&'), split;
-		    for( var i = 0; i < queries.length; i++ ) {
-		        split = queries[i].split('=');
+			for( var i = 0; i < queries.length; i++ ) {
+				split = queries[i].split('=');
 				if (split[0] === 'vars') {
 					vars = split[1].split('_');
 					if (vars.length < 12)
@@ -430,7 +430,7 @@
 					fitHeight = true;
 					$('#calcMode_Height').prop('checked',true);
 				}
-		    }
+			}
 			uiVars.destAspect = frameVars[0].destAspect;
 			update_slider_range();
 			$('#safety-margin').val(frameVars[0].safetyMargin).change();
@@ -442,7 +442,7 @@
 			
 			if (currentFrameTab == 0) {
 				for (var i = 1; i < 4; i++) {
-				    if (frameVars[0].destAspect === frameVars[i].destAspect && frameVars[0].safetyMargin === frameVars[i].safetyMargin) {							
+					if (frameVars[0].destAspect === frameVars[i].destAspect && frameVars[0].safetyMargin === frameVars[i].safetyMargin) {							
 						frameVars[i].destAspect = uiVars.destAspect;
 						frameVars[i].safetyMargin = safetyMargin;
 					}
@@ -491,38 +491,38 @@
 			copy_to_clipboard(url.slice(0, -1));
 		}
 		
-    </script>
+	</script>
 </head>
 <body onLoad="parse_URL()">
 	<div id="sourceBox">
-	    <fieldset>
-	      <legend>Source</legend>
+		<fieldset>
+		  <legend>Source</legend>
 			Width <input id="sourceWidth" type="text" class="uiVar"/>
 			Height <input id="sourceHeight" type="text" class="uiVar"/>
 			Source Aspect <input id="sourceAspect" type="text" class="uiVar"/>		
 			<span class="arrow-down inside-input source-aspect-menu"></span>
 			<script>
 				$(function(){
-				    $.contextMenu({
-				        selector: '.source-aspect-menu', 
-				        trigger: 'left',
-				        callback: function(key, options) {
-				            uiVars.sourceAspect = key;
+					$.contextMenu({
+						selector: '.source-aspect-menu', 
+						trigger: 'left',
+						callback: function(key, options) {
+							uiVars.sourceAspect = key;
 							update_slider_range();
-				        },
-					    position:  function(opt,  x,  y)  {
-					      opt.$menu.position({
-					        my:  'center top',
-					        at:  'center bottom+8',
-					        of:  opt.$trigger,
-					      });
-					    },
+						},
+						position:  function(opt,  x,  y)  {
+						  opt.$menu.position({
+							my:  'center top',
+							at:  'center bottom+8',
+							of:  opt.$trigger,
+						  });
+						},
 						items: {
-				            "1": {name: "1:1 Spherical"},
-				            "2": {name: "2:1 Anamorphic"},
-				            "1.3": {name: "1.3:1 Anamorphic"},
-				        }
-				    });
+							"1": {name: "1:1 Spherical"},
+							"2": {name: "2:1 Anamorphic"},
+							"1.3": {name: "1.3:1 Anamorphic"},
+						}
+					});
 				});
 			</script>
 		</fieldset>
@@ -537,39 +537,39 @@
 	<script>
 		var oriVal;
 		$('.tabs').on('dblclick', 'li', function () {
-		    oriVal = $(this).text();
-		    $(this).text('');
-		    $("<input type='text' class='tab-name'>").appendTo(this).focus();
+			oriVal = $(this).text();
+			$(this).text('');
+			$("<input type='text' class='tab-name'>").appendTo(this).focus();
 		});
 		$('.tabs').on('focusout', 'li > input', function () {
-		    var $this = $(this);
-		    $this.parent().text($this.val() || oriVal);
-		    $this.remove();
+			var $this = $(this);
+			$this.parent().text($this.val() || oriVal);
+			$this.remove();
 		});
 		jQuery(document).on('keydown', 'input.tab-name', function(ev) {
-		    if(ev.key === 'Enter')
+			if(ev.key === 'Enter')
 				$(':focus').blur();
 		});
 	</script>
 	
-    <div id="sliderBox">
+	<div id="sliderBox">
 		<div>Framing Aspect Ratio <input id="destAspect" type="text" class="uiVar"/><span style="margin-right: 1em">:1</span>
 		<span class="fit-to-menu">Fit to <span class="arrow-down"></span></span></div>
 		<script>
 			$(function(){
-			    $.contextMenu({
-			        selector: '.fit-to-menu', 
-			        trigger: 'left',
-				    position:  function(opt,  x,  y)  {
-				      opt.$menu.position({
-				        my:  'center top',
-				        at:  'center bottom',
-				        of:  opt.$trigger,
-				      });
-				    },
-				    build: function($triggerElement, e){
-				        return {
-					        callback: function(key, options) {
+				$.contextMenu({
+					selector: '.fit-to-menu', 
+					trigger: 'left',
+					position:  function(opt,  x,  y)  {
+					  opt.$menu.position({
+						my:  'center top',
+						at:  'center bottom',
+						of:  opt.$trigger,
+					  });
+					},
+					build: function($triggerElement, e){
+						return {
+							callback: function(key, options) {
 								if (key == 0) {
 									fitToWidth = uiVars.sourceWidth;
 									fitToHeight = uiVars.sourceHeight;
@@ -584,98 +584,98 @@
 								else
 									safetyMargin = (uiVars.sourceWidth - fitToWidth) / uiVars.sourceWidth;
 								$('#safety-margin').val(safetyMargin * 100.0).change();
-					        },
-				            items: {
+							},
+							items: {
 								"0": {name: "Source"},
 								"1": {name: $('#tab-0').text(), disabled: function(key) { return (currentFrameTab == --key)} },
 								"2": {name: $('#tab-1').text(), disabled: function(key) { return (currentFrameTab == --key)} },
 								"3": {name: $('#tab-2').text(), disabled: function(key) { return (currentFrameTab == --key)} },
 								"4": {name: $('#tab-3').text(), disabled: function(key) { return (currentFrameTab == --key)} }
-				            }
-				        };
-				    }
-			    });
+							}
+						};
+					}
+				});
 			});
 		</script>
 		Percent Safety Margin (Width)
-        <div id="safety-slider"></div>
-        <div id="safety-slider-label">
+		<div id="safety-slider"></div>
+		<div id="safety-slider-label">
 			<span id="safety-slider-min-label">full width</span>
 			<span id="safety-slider-max-label"></span>
 			<input id="safety-margin" type="text"/>
 		</div>
-	    <script>
+		<script>
 			var safetySlider = document.getElementById('safety-slider');
 
 			noUiSlider.create(safetySlider, {
-			    start: [0],
-			    range: {
-			        'min': 0,
-			        'max': 100
-			    },
-			    pips: {
-			        mode: 'values',
+				start: [0],
+				range: {
+					'min': 0,
+					'max': 100
+				},
+				pips: {
+					mode: 'values',
 					values: [0, 50, 100],
-			        density: 4
-			    },
+					density: 4
+				},
 			});
 		</script>
 	</div>
 	<div id="calculatedValues">
-	    <fieldset style="float: left; margin-right: 0.5em">
-	      <legend>Extraction Area</legend>
+		<fieldset style="float: left; margin-right: 0.5em">
+		  <legend>Extraction Area</legend>
 			Top-left X: <span id="extractionX"></span><br>
 			Top-left Y: <span id="extractionY"></span><br><br>
 			Width: <span id="extractionWidth"></span><br>
 			Height: <span id="extractionHeight"></span> <span id="heightVariance"></span><br><br>
 			Aspect ratio: <span id="aspectRatio"></span><br>
-	    </fieldset>
-	    <fieldset>
-	      <legend>Safety Margin</legend>
+		</fieldset>
+		<fieldset>
+		  <legend>Safety Margin</legend>
 			Horizontal (%): <span id="hSafety"></span><br>
 			Vertical (%): <span id="vSafety"></span><br>
 		</fieldset>
 		<fieldset style="margin-top: 0.5em">
-  	      <legend>Resized Output</legend>	
+  		  <legend>Resized Output</legend>	
   			Width <input id="destWidth" type="text" class="uiVar"/>
 			<span class="arrow-down inside-input destWidth-menu"></span>
 			<script>
 				$(function(){
-				    $.contextMenu({
-				        selector: '.destWidth-menu', 
-				        trigger: 'left',
-				        callback: function(key, options) {
-				            uiVars.destWidth = key;
+					$.contextMenu({
+						selector: '.destWidth-menu', 
+						trigger: 'left',
+						callback: function(key, options) {
+							uiVars.destWidth = key;
 							update_slider_range();
-				        },
-					    position:  function(opt,  x,  y)  {
-					      opt.$menu.position({
-					        my:  'center top',
-					        at:  'center bottom+8',
-					        of:  opt.$trigger,
-					      });
-					    },
+						},
+						position:  function(opt,  x,  y)  {
+						  opt.$menu.position({
+							my:  'center top',
+							at:  'center bottom+8',
+							of:  opt.$trigger,
+						  });
+						},
 						items: {
-				            "1920": {name: "HD 1920x1080"},
-				            "3840": {name: "UHD 3840x2160"},
-				            "1998": {name: "DCI 2K Flat 1998x1080"},
+							"1920": {name: "HD 1920x1080"},
+							"3840": {name: "UHD 3840x2160"},
+							"1998": {name: "DCI 2K Flat 1998x1080"},
 							"2048": {name: "DCI 2K Scope 2048x858"},
 							"3996": {name: "DCI 4K Flat 3996x2160"},
 							"4096": {name: "DCI 4K Scope 4096x1716"},
-				        }
-				    });
+						}
+					});
 				});
 			</script>
   			Height <input id="destHeight" type="text" disabled/><br>
 			Horizontal scale: <span id="hScale"></span><br>
 			Vertical scale: <span id="vScale"></span><br>
-	    </fieldset>
+		</fieldset>
 	</div>
 	<div id="canvasBox">
 		<canvas id="framelineCanvas"></canvas>
 	</div>
 	<div id="calModeBox">
-	    <fieldset>
+		<fieldset>
 			<legend>Calculation Modes</legend>
 			<form id="calcModeRadioBox">
 				Extraction Rounding :
@@ -706,13 +706,13 @@
 
 			// Update input box for slider when it moves
 			safetySlider.noUiSlider.on('update', function (values, handle) {
-			    $('#safety-margin').val(values[handle]);
+				$('#safety-margin').val(values[handle]);
 				update_fields();
 			});
 
 			// Handle updates to text entered in box for sider
 			$('#safety-margin').on('change', function () {
-			    safetySlider.noUiSlider.set(this.value);
+				safetySlider.noUiSlider.set(this.value);
 				update_fields();
 			});
 			
