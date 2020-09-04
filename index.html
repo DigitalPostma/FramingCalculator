@@ -6,7 +6,7 @@
     <title>Norville's Frame Chart Calculator</title>
 	<meta name="tagline" content="You know, for kids!">
 	<meta name="author" content="Peter Postma">
-	<meta name="revised" content="September 2nd, 2020, 8:08pm">
+	<meta name="revised" content="September 3, 2020, 11:56pm">
 	
 	<script type="text/javascript" src="jquery.js"></script>
 	<script type="text/javascript" src="nouislider.min.js"></script>
@@ -168,7 +168,7 @@
 		}
 	</style>
 	
-	<script>		
+	<script>
 		let uiVars = {
 		 	sourceWidth: 4096,
 			sourceHeight: 2160,
@@ -586,9 +586,9 @@
 								$('#safety-margin').val(safetyMargin * 100.0).change();
 					        },
 				            items: {
-					            "0": {name: "Source"},
-					            "1": {name: $('#tab-0').text(), disabled: function(key) { return (currentFrameTab == --key)} },
-					            "2": {name: $('#tab-1').text(), disabled: function(key) { return (currentFrameTab == --key)} },
+								"0": {name: "Source"},
+								"1": {name: $('#tab-0').text(), disabled: function(key) { return (currentFrameTab == --key)} },
+								"2": {name: $('#tab-1').text(), disabled: function(key) { return (currentFrameTab == --key)} },
 								"3": {name: $('#tab-2').text(), disabled: function(key) { return (currentFrameTab == --key)} },
 								"4": {name: $('#tab-3').text(), disabled: function(key) { return (currentFrameTab == --key)} }
 				            }
