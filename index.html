@@ -6,16 +6,17 @@
 	<title>Norville's Frame Chart Calculator</title>
 	<meta name="tagline" content="You know, for kids!">
 	<meta name="author" content="Peter Postma">
-	<meta name="revised" content="September 3, 2020, 11:56pm">
+	<meta name="revised" content="September 6th, 2020, 03:01pm">
 	
-	<script type="text/javascript" src="jquery.js"></script>
-	<script type="text/javascript" src="nouislider.min.js"></script>
-	<script type="text/javascript" src="jquery.ui.position.min.js"></script>
-	<script type="text/javascript" src="jquery.contextMenu.min.js"></script>
+	<script type="text/javascript" src="resources/jquery.js"></script>
+	<script type="text/javascript" src="resources/nouislider.min.js"></script>
+	<script type="text/javascript" src="resources/jquery.ui.position.min.js"></script>
+	<script type="text/javascript" src="resources/jquery.contextMenu.min.js"></script>
+	<script type="text/javascript" src="resources/cameradata.csv"></script>
 
-	<link href="nouislider.min.css" rel="stylesheet">
-	<link href="jquery.contextMenu.min.css" rel="stylesheet">
-	<link rel="shortcut icon" href="favicon.ico"/>
+	<link href="resources/nouislider.min.css" rel="stylesheet">
+	<link href="resources/jquery.contextMenu.min.css" rel="stylesheet">
+	<link rel="shortcut icon" href="resources/favicon.ico"/>
 
 	<style>
 		body {
@@ -154,8 +155,8 @@
 		}
 		.arrow-down {
 			display: inline-block;
-			width: 0; 
-			height: 0; 
+			width: 0;
+			height: 0;
 			border-left: 0.6em solid transparent;
 			border-right: 0.6em solid transparent;
 			border-top: 0.6em solid #888;
@@ -189,6 +190,62 @@
 		let fitHeight = false;
 		let heightVariance = 0.0;
 		var ctx;
+		
+		async function parse_cameradata() {
+			const items = new Object();
+			let lines = cameradataCSV.split('\n');
+			lines.shift();
+			lines.forEach((line) => {
+				vals = line.split(',');
+
+				// 0 Company
+				// 1 Camera Name
+				// 2 Primary Mode
+				// 3 Secondary Mode
+				// 4 Sensor Width Px
+				// 5 Sensor Height Px
+				// 6 Recording Width
+				// 7 Recording Height
+				// 8 Active Width
+				// 10 Active Height
+
+				if (vals[0] !== '') {
+					if (!(vals[0] in items)) {
+						items[vals[0]] = { 'name' : vals[0], 'items' : {} }
+					}
+					if (!(vals[1] in items[vals[0]].items)) {
+						items[vals[0]].items[vals[1]] = { 'name' : vals[1], 'items' : {}}
+					}
+					if (vals[3] === '') {
+						items[vals[0]].items[vals[1]].items[vals[6] + 'x' + vals[7]] = { 'name' : vals[2] + ' ' + vals[6] + 'x' + vals[7] }
+					} else {
+						if (!(vals[2] in items[vals[0]].items[vals[1]].items)) {
+							items[vals[0]].items[vals[1]].items[vals[2]] = { 'name' : vals[2], 'items' : {}}
+						}
+						items[vals[0]].items[vals[1]].items[vals[2]].items[vals[6] + 'x' + vals[7]] = { 'name' : vals[3] + ' ' + vals[6] + 'x' + vals[7] }
+					}
+				}
+			});			
+
+			$.contextMenu({
+				selector: '.source-menu', 
+				trigger: 'left',
+				callback: function(key, opt) {
+					dims = key.split('x');
+					uiVars.sourceWidth = dims[0];
+					uiVars.sourceHeight = dims[1];
+					update_slider_range();
+				},
+				position: function(opt, x, y) {
+				  opt.$menu.position({
+					my: 'left top',
+					at: 'left bottom+8',
+					of: opt.$trigger,
+				  });
+				},
+				items: items
+			});
+		}
 		
 		function calculate_values(destAspect, safetyMargin) {
 			let vals = {
@@ -304,7 +361,7 @@
 			for (let [key, value] of Object.entries(vals)) {
 				var precision = 5
 				if (!subpixelMode && String(key).startsWith('extraction')) {
-					precision = (key === 'extractionX' || key === 'extractionY') ? 1 : 0; 
+					precision = (key === 'extractionX' || key === 'extractionY') ? 1 : 0;
 				}
 				$('#'+key).text(value.toFixed(precision));
 			}
@@ -334,7 +391,7 @@
 					if (evenMode && minWidth % 2 != 0)
 						minWidth--
 				}
-				minPercentage =  (uiVars.sourceWidth - minWidth) / uiVars.sourceWidth * 100.0;
+				minPercentage = (uiVars.sourceWidth - minWidth) / uiVars.sourceWidth * 100.0;
 			}
 			
 			// Keep slide to usable range (not to sensitive and withing realistic bounds)
@@ -476,7 +533,7 @@
 			var url = window.location.href.split('?')[0] + '?';
 			url += 'vars=' + uiVars.sourceWidth + '_' + uiVars.sourceHeight + '_' + uiVars.sourceAspect + '_' + uiVars.destWidth;
 			for (var i = 0; i < 4; i++)
-				url +=  '_' + frameVars[i].destAspect + '_' + frameVars[i].safetyMargin;
+				url += '_' + frameVars[i].destAspect + '_' + frameVars[i].safetyMargin;
 			url += '&tabs=';
 			for (var i = 0; i < 4; i++)
 				url += encodeURIComponent($('#tab-' + i).text()) + ',';
@@ -496,7 +553,8 @@
 <body onLoad="parse_URL()">
 	<div id="sourceBox">
 		<fieldset>
-		  <legend>Source</legend>
+		  <legend>Source <span class="arrow-down source-menu"></span>
+		  </legend>
 			Width <input id="sourceWidth" type="text" class="uiVar"/>
 			Height <input id="sourceHeight" type="text" class="uiVar"/>
 			Source Aspect <input id="sourceAspect" type="text" class="uiVar"/>		
@@ -510,11 +568,11 @@
 							uiVars.sourceAspect = key;
 							update_slider_range();
 						},
-						position:  function(opt,  x,  y)  {
+						position:  function(opt, x, y) {
 						  opt.$menu.position({
-							my:  'center top',
-							at:  'center bottom+8',
-							of:  opt.$trigger,
+							my: 'center top',
+							at: 'center bottom+8',
+							of: opt.$trigger,
 						  });
 						},
 						items: {
@@ -560,11 +618,11 @@
 				$.contextMenu({
 					selector: '.fit-to-menu', 
 					trigger: 'left',
-					position:  function(opt,  x,  y)  {
+					position: function(opt, x, y) {
 					  opt.$menu.position({
-						my:  'center top',
-						at:  'center bottom',
-						of:  opt.$trigger,
+						my: 'center top',
+						at: 'center bottom',
+						of: opt.$trigger,
 					  });
 					},
 					build: function($triggerElement, e){
@@ -636,8 +694,8 @@
 			Vertical (%): <span id="vSafety"></span><br>
 		</fieldset>
 		<fieldset style="margin-top: 0.5em">
-  		  <legend>Resized Output</legend>	
-  			Width <input id="destWidth" type="text" class="uiVar"/>
+		  <legend>Resized Output</legend>	
+		  	Width <input id="destWidth" type="text" class="uiVar"/>
 			<span class="arrow-down inside-input destWidth-menu"></span>
 			<script>
 				$(function(){
@@ -648,11 +706,11 @@
 							uiVars.destWidth = key;
 							update_slider_range();
 						},
-						position:  function(opt,  x,  y)  {
+						position: function(opt, x, y) {
 						  opt.$menu.position({
-							my:  'center top',
-							at:  'center bottom+8',
-							of:  opt.$trigger,
+							my: 'center top',
+							at: 'center bottom+8',
+							of: opt.$trigger,
 						  });
 						},
 						items: {
@@ -666,7 +724,7 @@
 					});
 				});
 			</script>
-  			Height <input id="destHeight" type="text" disabled/><br>
+			Height <input id="destHeight" type="text" disabled/><br>
 			Horizontal scale: <span id="hScale"></span><br>
 			Vertical scale: <span id="vScale"></span><br>
 		</fieldset>
@@ -763,7 +821,8 @@
 				update_slider_range();
 				$('#safety-margin').val(frameVars[selectedFrameTab].safetyMargin).change();
 			});
-
+			
+			parse_cameradata();
 		})
 	</script>
 </body>
