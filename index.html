@@ -39,7 +39,7 @@
 			margin-bottom: 0.5em;
 		}
 		#destAspect {
-			margin-right: 0em;
+			width: 6em;
 			margin-bottom: 0.6em
 		}
 		.fit-to-menu {
@@ -272,7 +272,7 @@
 			if (!subpixelMode) {
 				var newHeight = Math.round(vals.extractionHeight);
 				if (evenMode)
-					newHeight = 2 * Math.round(vals.extractionHeight / 2);					
+					newHeight = 2 * Math.round(vals.extractionHeight / 2);				
 				heightVariance = vals.extractionHeight - newHeight;
 				vals.extractionHeight = newHeight;
 				vals.aspectRatio = vals.extractionWidth * uiVars.sourceAspect / vals.extractionHeight;
@@ -611,7 +611,36 @@
 	</script>
 	
 	<div id="sliderBox">
-		<div>Framing Aspect Ratio <input id="destAspect" type="text" class="uiVar"/><span style="margin-right: 1em">:1</span>
+		<div>Framing Aspect Ratio <input id="destAspect" type="text" class="uiVar"/><span class="arrow-down inside-input destAspect-menu"></span>
+		<span>:1</span>
+		<script>
+			$(function(){
+				$.contextMenu({
+					selector: '.destAspect-menu', 
+					trigger: 'left',
+					callback: function(key, options) {
+						uiVars.destAspect = key;
+						update_slider_range();
+					},
+					position: function(opt, x, y) {
+					  opt.$menu.position({
+						my: 'center top',
+						at: 'center bottom+8',
+						of: opt.$trigger,
+					  });
+					},
+					items: {
+						"1.3333333":{name: "4:3 (4:3)"},
+						"1.7777778": {name: "16:9 (16:9)"},
+						"1.85": {name: "1.85 (1992:1080)"},
+						"1.8962962": {name: "DCI 1.9 (2048:1080)"},
+						"2.0": {name: "2:1 (2:1)"},
+						"2.1980198": {name: "DCI 2.20 (1998:909)"},
+						"2.3869464": {name: "DCI 2.39 (2048:858)"},
+					}
+				});
+			});
+		</script>
 		<span class="fit-to-menu">Fit to <span class="arrow-down"></span></span></div>
 		<script>
 			$(function(){
@@ -703,7 +732,7 @@
 						selector: '.destWidth-menu', 
 						trigger: 'left',
 						callback: function(key, options) {
-							uiVars.destWidth = key;
+							uiVars.destWidth = parseFloat(key);
 							update_slider_range();
 						},
 						position: function(opt, x, y) {
