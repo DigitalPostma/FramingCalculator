@@ -6,7 +6,7 @@
 	<title>Norville's Frame Chart Calculator</title>
 	<meta name="tagline" content="You know, for kids!">
 	<meta name="author" content="Peter Postma">
-	<meta name="revised" content="September 6th, 2020, 03:01pm">
+	<meta name="revised" content="September 7th, 2020, 05:33pm">
 	
 	<script type="text/javascript" src="resources/jquery.js"></script>
 	<script type="text/javascript" src="resources/nouislider.min.js"></script>
@@ -659,7 +659,9 @@
 				});
 			});
 		</script>
-		<span class="fit-to-menu">Fit to <span class="arrow-down"></span></span></div>
+		<span class="fit-to-menu">Fit to <span class="arrow-down"></span></span>
+		<input type="button" id="reset-button" value="Reset" style="float: right">
+		</div>
 		<script>
 			$(function(){
 				$.contextMenu({
@@ -866,6 +868,17 @@
 				fitHeight = (mode === "Height");
 				
 				update_slider_range();
+			});
+
+			// Reset current frame to be same as frame 1
+			$('#reset-button').click( function() {
+				if (selectedFrameTab != 0) {
+					frameVars[selectedFrameTab].destAspect = frameVars[0].destAspect;
+					frameVars[selectedFrameTab].safetyMargin = frameVars[0].safetyMargin;
+					uiVars.destAspect = frameVars[selectedFrameTab].destAspect;
+					update_slider_range();
+					$('#safety-margin').val(frameVars[selectedFrameTab].safetyMargin).change();
+				}
 			});
 			
 			// Make a URL and copy it to clipboard when the button is clicked
