@@ -6,7 +6,7 @@
 	<title>Norville's Frame Chart Calculator</title>
 	<meta name="tagline" content="You know, for kids!">
 	<meta name="author" content="Peter Postma">
-	<meta name="revised" content="September 7th, 2020, 05:33pm">
+	<meta name="revised" content="September 8th, 2020, 10:33pm">
 	
 	<script type="text/javascript" src="resources/jquery.js"></script>
 	<script type="text/javascript" src="resources/nouislider.min.js"></script>
@@ -42,11 +42,13 @@
 			width: 6em;
 			margin-bottom: 0.6em
 		}
+		.pull-down {
+			border: 1px solid black;
+			background: #EEE;
+			padding: 0.2em 0.8em;
+		}
 		.fit-to-menu {
 			margin-left: 10em;
-			border: 1px solid black;
-			padding: 0.2em 0.8em;
-			background: #EEE;
 		}
 		#sliderBox {
 			position: relative;
@@ -149,16 +151,16 @@
 			border-bottom: 1px solid white;
 			color: #000;
 		}
-		#tab-0.current{
+		#tab-1.current{
 			background-image: linear-gradient(#99F, #FFF)
 		}
-		#tab-1.current{
+		#tab-2.current{
 			background-image: linear-gradient(#FF9, #FFF)
 		}
-		#tab-2.current{
+		#tab-3.current{
 			background-image: linear-gradient(#9F9, #FFF)
 		}
-		#tab-3.current{
+		#tab-4.current{
 			background-image: linear-gradient(#F99, #FFF)
 		}
 		.arrow-down {
@@ -184,15 +186,17 @@
 			sourceAspect: 1.0,
 		 	destWidth: 4096,
 			destHeight: 0,	//calulated
-			destAspect: 2.351
+			destAspect: 2.351,
+			align: 0,
+			alignTo: 0,
 		};
 		let frameVars = [
-			{destAspect: 2.351, safetyMargin: 0.0},
-			{destAspect: 2.351, safetyMargin: 0.0},
-			{destAspect: 2.351, safetyMargin: 0.0},
-			{destAspect: 2.351, safetyMargin: 0.0}
+			{destAspect: 2.351, safetyMargin: 0.0, align: 0, alignTo: 0, destWidth: 4096},
+			{destAspect: 2.351, safetyMargin: 0.0, align: 0, alignTo: 0, destWidth: 4096},
+			{destAspect: 2.351, safetyMargin: 0.0, align: 0, alignTo: 0, destWidth: 4096},
+			{destAspect: 2.351, safetyMargin: 0.0, align: 0, alignTo: 0, destWidth: 4096},
 		];
-		let currentFrameTab = 0;
+		let currentFrameTab = 1;
 		let subpixelMode = false;
 		let evenMode = true;
 		let fitHeight = false;
@@ -233,7 +237,7 @@
 						items[vals[0]].items[vals[1]].items[vals[2]].items[vals[6] + 'x' + vals[7]] = { 'name' : vals[3] + ' ' + vals[6] + 'x' + vals[7] }
 					}
 				}
-			});			
+			});
 
 			$.contextMenu({
 				selector: '.source-menu', 
@@ -255,7 +259,7 @@
 			});
 		}
 		
-		function calculate_values(destAspect, safetyMargin) {
+		function calculate_values(vars) {
 			let vals = {
 				extractionX: 0,
 				extractionY: 0,
@@ -267,14 +271,14 @@
 				hSafety: 0,
 				vSafety: 0
 			};
-						
-			vals.extractionWidth = uiVars.sourceWidth - (uiVars.sourceWidth * safetyMargin);
+
+			vals.extractionWidth = uiVars.sourceWidth - (uiVars.sourceWidth * (vars.safetyMargin / 100.0));
 			vals.extractionX = (uiVars.sourceWidth - vals.extractionWidth) / 2.0;
 			vals.hSafety = (uiVars.sourceWidth - vals.extractionWidth) / uiVars.sourceWidth * 100.0;
 
-			vals.aspectRatio = destAspect;
+			vals.aspectRatio = vars.destAspect;
 			
-			vals.extractionHeight = vals.extractionWidth / destAspect * uiVars.sourceAspect;
+			vals.extractionHeight = vals.extractionWidth / vars.destAspect * uiVars.sourceAspect;
 			vals.vSafety = (uiVars.sourceHeight - vals.extractionHeight) / uiVars.sourceHeight * 100.0;
 			heightVariance = 0.0
 			if (!subpixelMode) {
@@ -285,10 +289,28 @@
 				vals.extractionHeight = newHeight;
 				vals.aspectRatio = vals.extractionWidth * uiVars.sourceAspect / vals.extractionHeight;
 			}
-			vals.extractionY = (uiVars.sourceHeight - vals.extractionHeight) / 2.0;
+
+			if (vars.align === 1) //top
+				if (vars.alignTo === 0)
+					vals.extractionY = 0;
+				else {
+					var tvals = calculate_values(frameVars[(vars.alignTo - 1)]);
+					vals.extractionY = tvals.extractionY;
+				}
+			else if (vars.align === 2) //bottom
+				if (vars.alignTo === 0)
+					vals.extractionY = uiVars.sourceHeight - vals.extractionHeight;
+				else {
+					var tvals = calculate_values(frameVars[(vars.alignTo - 1)]);
+					vals.extractionY = tvals.extractionY + tvals.extractionHeight - vals.extractionHeight;
+				}
+			else // center
+				vals.extractionY = (uiVars.sourceHeight - vals.extractionHeight) / 2.0;
 			
 			if (!subpixelMode) {
-				uiVars.destWidth = Math.round(uiVars.destWidth);
+				vals.extractionX = Math.round(vals.extractionX - 0.01);  // -0.01 to force 0.5 to round down
+				vals.extractionY = Math.round(vals.extractionY - 0.01);
+				vars.destWidth = Math.round(vars.destWidth);
 				uiVars.destHeight = Math.round(uiVars.destHeight);
 				vals.extractionWidth = Math.round(vals.extractionWidth);
 			}
@@ -297,10 +319,16 @@
 				vals.vScale = uiVars.destHeight / vals.extractionHeight;
 				vals.hScale = vals.vScale * uiVars.sourceAspect;
 			} else {
-				vals.hScale = uiVars.destWidth / vals.extractionWidth;
+				vals.hScale = vars.destWidth / vals.extractionWidth;
 				vals.vScale = vals.hScale / uiVars.sourceAspect;
 			}
 			return vals;
+		}
+		
+		function calculate_current_values() {
+			return calculate_values( Object.assign(uiVars,
+				{ safetyMargin : parseFloat($('#safety-margin').val()) }
+			));
 		}
 		
 		function draw_frame_lines() {			
@@ -324,12 +352,12 @@
 			ctx.globalAlpha = 0.6;
 			
 			for (var i = 0; i < 4; i++) {
-				if (currentFrameTab != i) {
-					if (i > 0 && frameVars[0].destAspect === frameVars[i].destAspect && frameVars[0].safetyMargin === frameVars[i].safetyMargin)
+				if ((currentFrameTab - 1) != i) {
+					if (i > 0 && JSON.stringify(frameVars[0]) === JSON.stringify(frameVars[i]))
 						continue;
-					vals = calculate_values(frameVars[i].destAspect, frameVars[i].safetyMargin / 100.0);
+					vals = calculate_values(frameVars[i]);
 				} else {
-					vals = calculate_values(uiVars.destAspect, parseFloat($('#safety-margin').val()) / 100.0);
+					vals = calculate_current_values();
 				}
 				switch (i) {
 					case 0:
@@ -361,10 +389,24 @@
 		function update_fields() {
 			uiVars.destHeight = Math.round(uiVars.destWidth / uiVars.destAspect);
 
-			var vals = calculate_values(uiVars.destAspect, parseFloat($('#safety-margin').val()) / 100.0);
+			var vals = calculate_current_values();
 			
 			for (let [key, value] of Object.entries(uiVars)) {
-				$('#'+key).val(value);
+				if (key === 'align') {
+					if (value === 0)
+						$('#align-value').text('Center');
+					if (value === 1)
+						$('#align-value').text('Top ');
+					if (value === 2)
+						$('#align-value').text('Bottom');
+				} else if (key === 'alignTo') {
+					if (value === 0)
+						$('#alignTo-value').text('Source');
+					else
+						$('#alignTo-value').text($('#tab-' + value).text());
+				} else {
+					$('#' + key).val(value);
+				}
 			}
 			for (let [key, value] of Object.entries(vals)) {
 				var precision = 5
@@ -405,7 +447,7 @@
 				minPercentage = (uiVars.sourceWidth - minWidth) / uiVars.sourceWidth * 100.0;
 			}
 			
-			// Keep slide to usable range (not to sensitive and withing realistic bounds)
+			// Keep slide to usable range (not too sensitive and within realistic bounds)
 			var maxPercentage = ( minPercentage < 50.0 ) ? 50.0 : minPercentage + 20;
 			if (maxPercentage > 99.0)
 				maxPercentage = 99.0
@@ -469,22 +511,24 @@
 				split = queries[i].split('=');
 				if (split[0] === 'vars') {
 					vars = split[1].split('_');
-					if (vars.length < 12)
+					if (vars.length < 23)
 						break;
 					uiVars.sourceWidth = parseInt(vars[0]);
 					uiVars.sourceHeight = parseInt(vars[1]);
 					uiVars.sourceAspect = parseFloat(vars[2]);
-					uiVars.destWidth = parseInt(vars[3]);
-					var x = 4;
+					var x = 3;
 					for (var y = 0; y < 4; y++) {
 						frameVars[y].destAspect = parseFloat(vars[x++]);
 						frameVars[y].safetyMargin = parseFloat(vars[x++]);
+						frameVars[y].align = parseInt(vars[x++]);
+						frameVars[y].alignTo = parseInt(vars[x++]);
+						frameVars[y].destWidth = parseInt(vars[x++]);
 					}
 				} else if (split[0] === 'tabs') {
 					vars = split[1].split(',');
 					if (vars.length == 4)
 						for (var y = 0; y < 4; y++)
-							$('#tab-' + y).text(decodeURIComponent(vars[y]));
+							$('#tab-' + (y + 1)).text(decodeURIComponent(vars[y]));
 				} else if (split[0] === 'mode') {
 					if (split[1] === 'single') {
 						subpixelMode = false;
@@ -504,26 +548,28 @@
 					$('#calcMode_Height').prop('checked',true);
 				}
 			}
-			uiVars.destAspect = frameVars[0].destAspect;
+			Object.assign(uiVars, frameVars[0]);
 			update_slider_range();
 			$('#safety-margin').val(frameVars[0].safetyMargin).change();
 		}
 		
 		function store_frame_values() {
 			// Keep frames which haven't been adjusted the same as the first one
-			var safetyMargin = parseFloat($('#safety-margin').val());
-			
-			if (currentFrameTab == 0) {
-				for (var i = 1; i < 4; i++) {
-					if (frameVars[0].destAspect === frameVars[i].destAspect && frameVars[0].safetyMargin === frameVars[i].safetyMargin) {							
-						frameVars[i].destAspect = uiVars.destAspect;
-						frameVars[i].safetyMargin = safetyMargin;
-					}
-				}
-			}
+			var copyFrames = [];
+			if (currentFrameTab == 1)
+				for (var i = 1; i < 4; i++)
+					if (JSON.stringify(frameVars[0]) === JSON.stringify(frameVars[i]))
+						copyFrames.push(i);
 
-			frameVars[currentFrameTab].destAspect = uiVars.destAspect;
-			frameVars[currentFrameTab].safetyMargin = safetyMargin;
+			frameVars[currentFrameTab - 1].destAspect = uiVars.destAspect;
+			frameVars[currentFrameTab - 1].safetyMargin = parseFloat($('#safety-margin').val());;
+			frameVars[currentFrameTab - 1].align = uiVars.align;
+			frameVars[currentFrameTab - 1].alignTo = uiVars.alignTo;
+			frameVars[currentFrameTab - 1].destWidth = uiVars.destWidth;
+
+			copyFrames.forEach(function(i){
+				Object.assign(frameVars[i], frameVars[0]);
+			});
 		}
 		
 		const copy_to_clipboard = str => {
@@ -547,11 +593,11 @@
 			store_frame_values();
 			
 			var url = window.location.href.split('?')[0] + '?';
-			url += 'vars=' + uiVars.sourceWidth + '_' + uiVars.sourceHeight + '_' + uiVars.sourceAspect + '_' + uiVars.destWidth;
+			url += 'vars=' + uiVars.sourceWidth + '_' + uiVars.sourceHeight + '_' + uiVars.sourceAspect;
 			for (var i = 0; i < 4; i++)
-				url += '_' + frameVars[i].destAspect + '_' + frameVars[i].safetyMargin;
+				url += '_' + frameVars[i].destAspect + '_' + frameVars[i].safetyMargin + '_' + frameVars[i].align + '_' + frameVars[i].alignTo + '_' + frameVars[i].destWidth ;
 			url += '&tabs=';
-			for (var i = 0; i < 4; i++)
+			for (var i = 1; i < 5; i++)
 				url += encodeURIComponent($('#tab-' + i).text()) + ',';
 			url = url.replace(/.$/,"&");
 			
@@ -586,7 +632,7 @@
 							uiVars.sourceAspect = parseFloat(key);
 							update_slider_range();
 						},
-						position:  function(opt, x, y) {
+						position: function(opt, x, y) {
 						  opt.$menu.position({
 							my: 'center top',
 							at: 'center bottom+8',
@@ -605,12 +651,13 @@
 	</div>
 	
 	<ul class="tabs">
-		<li class="tab-link current" id="tab-0">Frame One</li>
-		<li class="tab-link" id="tab-1">Frame Two</li>
-		<li class="tab-link" id="tab-2">Frame Three</li>
-		<li class="tab-link" id="tab-3">Frame Four</li>
+		<li class="tab-link current" id="tab-1">Frame One</li>
+		<li class="tab-link" id="tab-2">Frame Two</li>
+		<li class="tab-link" id="tab-3">Frame Three</li>
+		<li class="tab-link" id="tab-4">Frame Four</li>
 	</ul>
 	<script>
+		// Make tab names editable
 		var oriVal;
 		$('.tabs').on('dblclick', 'li', function () {
 			oriVal = $(this).text();
@@ -619,8 +666,9 @@
 		});
 		$('.tabs').on('focusout', 'li > input', function () {
 			var $this = $(this);
-			$this.parent().text($this.val() || oriVal);
+			$this.parent().text($this.val().trim() || oriVal);
 			$this.remove();
+			update_fields();
 		});
 		jQuery(document).on('keydown', 'input.tab-name', function(ev) {
 			if(ev.key === 'Enter')
@@ -648,18 +696,18 @@
 					  });
 					},
 					items: {
-						"1.3333333":{name: "4:3 (4:3)"},
-						"1.7777778": {name: "16:9 (16:9)"},
+						"1.3333333333":{name: "4:3 (4:3)"},
+						"1.7777777778": {name: "16:9 (16:9)"},
 						"1.85": {name: "1.85 (1992:1080)"},
-						"1.8962962": {name: "DCI 1.9 (2048:1080)"},
+						"1.89629629629": {name: "DCI 1.9 (2048:1080)"},
 						"2.0": {name: "2:1 (2:1)"},
-						"2.1980198": {name: "DCI 2.20 (1998:909)"},
-						"2.3869464": {name: "DCI 2.39 (2048:858)"},
+						"2.19801980198": {name: "DCI 2.20 (1998:909)"},
+						"2.38694638694": {name: "DCI 2.39 (2048:858)"},
 					}
 				});
 			});
 		</script>
-		<span class="fit-to-menu">Fit to <span class="arrow-down"></span></span>
+		<span class="pull-down fit-to-menu">Fit to <span class="arrow-down"></span></span>
 		<input type="button" id="reset-button" value="Reset" style="float: right">
 		</div>
 		<script>
@@ -667,6 +715,7 @@
 				$.contextMenu({
 					selector: '.fit-to-menu', 
 					trigger: 'left',
+					autoHide: true,
 					position: function(opt, x, y) {
 					  opt.$menu.position({
 						my: 'center top',
@@ -682,7 +731,7 @@
 									fitToHeight = uiVars.sourceHeight;
 								} else {
 									key--;
-									vals = calculate_values(frameVars[key].destAspect, frameVars[key].safetyMargin / 100.0);
+									vals = calculate_values(frameVars[key]);
 									fitToWidth = vals.extractionWidth;
 									fitToHeight = vals.extractionHeight;
 								}
@@ -694,10 +743,10 @@
 							},
 							items: {
 								"0": {name: "Source"},
-								"1": {name: $('#tab-0').text(), disabled: function(key) { return (currentFrameTab == --key)} },
-								"2": {name: $('#tab-1').text(), disabled: function(key) { return (currentFrameTab == --key)} },
-								"3": {name: $('#tab-2').text(), disabled: function(key) { return (currentFrameTab == --key)} },
-								"4": {name: $('#tab-3').text(), disabled: function(key) { return (currentFrameTab == --key)} }
+								"1": {name: $('#tab-1').text(), disabled: function(key) { return (currentFrameTab == key)} },
+								"2": {name: $('#tab-2').text(), disabled: function(key) { return (currentFrameTab == key)} },
+								"3": {name: $('#tab-3').text(), disabled: function(key) { return (currentFrameTab == key)} },
+								"4": {name: $('#tab-4').text(), disabled: function(key) { return (currentFrameTab == key)} }
 							}
 						};
 					}
@@ -727,6 +776,61 @@
 				},
 			});
 		</script>
+		<div>Align <span class="pull-down align-menu"><span id="align-value">Center</span><span class="arrow-down"></span></span>
+			 to <span class="pull-down align-to-menu"><span id="alignTo-value">Source</span><span class="arrow-down"></span></span></div>
+		<script>
+			$(function(){
+				$.contextMenu({
+					selector: '.align-menu', 
+					trigger: 'left',
+					position: function(opt, x, y) {
+					  opt.$menu.position({
+						my: 'left top',
+						at: 'left bottom',
+						of: opt.$trigger,
+					  });
+					},
+					callback: function(key, options) {
+						uiVars.align = parseInt(key);
+						update_fields();
+					},
+					items: {
+						"0": {name: "Center"},
+						"1": {name: "Top" },
+						"2": {name: "Bottom"},
+					}
+				});
+			});
+			$(function(){
+				$.contextMenu({
+					selector: '.align-to-menu', 
+					trigger: 'left',
+					autoHide: true,
+					position: function(opt, x, y) {
+					  opt.$menu.position({
+						my: 'left top',
+						at: 'left bottom',
+						of: opt.$trigger,
+					  });
+					},
+					build: function($triggerElement, e){
+						return {
+							callback: function(key, options) {
+								uiVars.alignTo = parseInt(key);
+								update_fields();
+							},
+							items: {
+								"0": {name: "Source"},
+								"1": {name: $('#tab-1').text(), disabled: function(key) { return (currentFrameTab == key || frameVars[0].alignTo == currentFrameTab)} },
+								"2": {name: $('#tab-2').text(), disabled: function(key) { return (currentFrameTab == key || frameVars[1].alignTo == currentFrameTab)} },
+								"3": {name: $('#tab-3').text(), disabled: function(key) { return (currentFrameTab == key || frameVars[2].alignTo == currentFrameTab)} },
+								"4": {name: $('#tab-4').text(), disabled: function(key) { return (currentFrameTab == key || frameVars[3].alignTo == currentFrameTab)} },
+							}
+						};
+					}
+				});
+			});
+		</script>
 	</div>
 	<div id="calculatedValues">
 		<fieldset id="extractionArea">
@@ -752,8 +856,7 @@
 						selector: '.destWidth-menu', 
 						trigger: 'left',
 						callback: function(key, options) {
-							uiVars.destWidth = parseFloat(key);
-							update_slider_range();
+
 						},
 						position: function(opt, x, y) {
 						  opt.$menu.position({
@@ -762,13 +865,36 @@
 							of: opt.$trigger,
 						  });
 						},
-						items: {
-							"1920": {name: "HD 1920x1080"},
-							"3840": {name: "UHD 3840x2160"},
-							"1998": {name: "DCI 2K Flat 1998x1080"},
-							"2048": {name: "DCI 2K Scope 2048x858"},
-							"3996": {name: "DCI 4K Flat 3996x2160"},
-							"4096": {name: "DCI 4K Scope 4096x1716"},
+						build: function($triggerElement, e){
+							return {
+								callback: function(key, options) {
+									if (key < 5) {
+										vals = calculate_values(frameVars[--key]);
+										vals2 = calculate_current_values();
+										uiVars.destWidth = Math.round(vals.hScale * vals2.extractionWidth);
+									} else {
+										uiVars.destWidth = parseFloat(key);
+									}
+									update_slider_range();
+								},
+								items: {
+									"1920": {name: "HD 1920x1080"},
+									"3840": {name: "UHD 3840x2160"},
+									"1998": {name: "DCI 2K Flat 1998x1080"},
+									"2048": {name: "DCI 2K Scope 2048x858"},
+									"3996": {name: "DCI 4K Flat 3996x2160"},
+									"4096": {name: "DCI 4K Scope 4096x1716"},
+									"submenu": {
+										name: "Match Scaling From ",
+										items: {
+											"1": {name: $('#tab-1').text(), disabled: function(key) { return (currentFrameTab == key)} },
+											"2": {name: $('#tab-2').text(), disabled: function(key) { return (currentFrameTab == key)} },
+											"3": {name: $('#tab-3').text(), disabled: function(key) { return (currentFrameTab == key)} },
+											"4": {name: $('#tab-4').text(), disabled: function(key) { return (currentFrameTab == key)} }
+										}
+									}
+								}
+							};
 						}
 					});
 				});
@@ -873,11 +999,10 @@
 			// Reset current frame to be same as frame 1
 			$('#reset-button').click( function() {
 				if (selectedFrameTab != 0) {
-					frameVars[selectedFrameTab].destAspect = frameVars[0].destAspect;
-					frameVars[selectedFrameTab].safetyMargin = frameVars[0].safetyMargin;
-					uiVars.destAspect = frameVars[selectedFrameTab].destAspect;
+					Object.assign(frameVars[selectedFrameTab - 1], frameVars[0]);
+					Object.assign(uiVars, frameVars[0]);
 					update_slider_range();
-					$('#safety-margin').val(frameVars[selectedFrameTab].safetyMargin).change();
+					$('#safety-margin').val(frameVars[selectedFrameTab - 1].safetyMargin).change();
 				}
 			});
 			
@@ -898,9 +1023,9 @@
 				store_frame_values();
 				
 				currentFrameTab = selectedFrameTab;
-				uiVars.destAspect = frameVars[selectedFrameTab].destAspect;
+				Object.assign(uiVars, frameVars[selectedFrameTab - 1]);
 				update_slider_range();
-				$('#safety-margin').val(frameVars[selectedFrameTab].safetyMargin).change();
+				$('#safety-margin').val(frameVars[selectedFrameTab - 1].safetyMargin).change();
 			});
 			
 			parse_cameradata();
