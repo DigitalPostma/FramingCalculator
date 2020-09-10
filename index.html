@@ -6,7 +6,7 @@
 	<title>Norville's Frame Chart Calculator</title>
 	<meta name="tagline" content="You know, for kids!">
 	<meta name="author" content="Peter Postma">
-	<meta name="revised" content="September 10th, 2020, 1:20am">
+	<meta name="revised" content="September 10th, 2020, 4:16pm">
 	
 	<script type="text/javascript" src="resources/jquery.js"></script>
 	<script type="text/javascript" src="resources/nouislider.min.js"></script>
@@ -246,7 +246,7 @@
 					dims = key.split('x');
 					uiVars.sourceWidth = parseInt(dims[0]);
 					uiVars.sourceHeight = parseInt(dims[1]);
-					set_min_safety_for_all_frames();
+					check_safety_for_all_frames();
 					update_slider_range();
 				},
 				position: function(opt, x, y) {
@@ -432,74 +432,85 @@
 			safetySlider.noUiSlider.set(value);
 		}
 		
-		function set_min_safety_for_all_frames() {
-			for (var i = 0; i < 4; i++) {
-				var minPercentage = 0.0;
-				var minWidth = uiVars.sourceWidth;
-				if (uiVars.sourceHeight * frameVars[i].destAspect / uiVars.sourceAspect < minWidth) {
-					minWidth = (uiVars.sourceHeight * frameVars[i].destAspect / uiVars.sourceAspect);
-					if (!subpixelMode) {
-						minWidth = Math.round(minWidth);
-						if (evenMode && minWidth % 2 != 0)
-							minWidth--
-					}
-					minPercentage = (uiVars.sourceWidth - minWidth) / uiVars.sourceWidth * 100.0;
+		function calculate_slider_range(destAspect) {
+			var p = {
+				minPercentage : 0.0,
+				maxPercentage : 0.0,
+				minWidth : uiVars.sourceWidth,
+				maxWidth : 0
+			}
+
+			if (uiVars.sourceHeight * destAspect / uiVars.sourceAspect < p.minWidth) {
+				p.minWidth = (uiVars.sourceHeight * destAspect / uiVars.sourceAspect);
+				if (!subpixelMode) {
+					p.minWidth = Math.round(p.minWidth);
+					if (evenMode && p.minWidth % 2 != 0)
+						p.minWidth--
 				}
-				if (frameVars[i].safetyMargin < minPercentage)
-					frameVars[i].safetyMargin = minPercentage;
+				p.minPercentage = (uiVars.sourceWidth - p.minWidth) / uiVars.sourceWidth * 100.0;
+			}
+			
+			// Keep slider to usable range (not too sensitive and within realistic bounds)
+			p.maxPercentage = ( p.minPercentage < 50.0 ) ? 50.0 : p.minPercentage + 30.0;
+			if (p.maxPercentage > 99.0)
+				p.maxPercentage = 99.0
+			if (p.maxPercentage > p.minPercentage + 30.0)
+				p.maxPercentage = p.minPercentage + 30.0
+
+			p.maxWidth = (1.0 - (p.maxPercentage / 100.0)) * uiVars.sourceWidth;
+			if (!subpixelMode) {
+				p.maxWidth = Math.round(p.maxWidth);
+				if (evenMode) {
+					p.maxWidth = 2 * Math.round(p.maxWidth / 2);
+				}
+				p.maxPercentage = (uiVars.sourceWidth - p.maxWidth) / uiVars.sourceWidth * 100.0;
+			}
+		
+			return p;
+		}
+		
+		function check_safety_for_all_frames() {
+			for (var i = 0; i < 4; i++) {
+				var p = calculate_slider_range(frameVars[i].destAspect);
+				if (frameVars[i].safetyMargin < p.minPercentage)
+					frameVars[i].safetyMargin = p.minPercentage;
+				if (frameVars[i].safetyMargin > p.maxPercentage)
+					frameVars[i].safetyMargin = p.maxPercentage;
 			}
 		}
 
 		function update_slider_range() {
-			var minPercentage = 0.0;
-			var minWidth = uiVars.sourceWidth;
-			if (uiVars.sourceHeight * uiVars.destAspect / uiVars.sourceAspect < minWidth) {
-				minWidth = (uiVars.sourceHeight * uiVars.destAspect / uiVars.sourceAspect);
-				if (!subpixelMode) {
-					minWidth = Math.round(minWidth);
-					if (evenMode && minWidth % 2 != 0)
-						minWidth--
-				}
-				minPercentage = (uiVars.sourceWidth - minWidth) / uiVars.sourceWidth * 100.0;
-			}
-			
-			// Keep slide to usable range (not too sensitive and within realistic bounds)
-			var maxPercentage = ( minPercentage < 50.0 ) ? 50.0 : minPercentage + 20;
-			if (maxPercentage > 99.0)
-				maxPercentage = 99.0
-			if (maxPercentage > minPercentage + 30.0) {
-				maxPercentage = minPercentage + 30.0
-				$('#safety-slider-max-label').html('<br>');
-			} else {
+			var p = calculate_slider_range(uiVars.destAspect);
+
+			if (p.maxPercentage == ( (uiVars.sourceWidth - uiVars.destWidth / 2) / uiVars.sourceWidth * 100.0 ))
 				$('#safety-slider-max-label').html((uiVars.sourceAspect != 1.0 ? 'horizontal' : 'pixel') + ' doubling<br>');
-			}
-			var maxWidth = (1.0 - (maxPercentage / 100.0)) * uiVars.sourceWidth;
-			if (!subpixelMode) {
-				maxWidth = Math.round(maxWidth);
-				if (evenMode) {
-					maxWidth = 2 * Math.round(maxWidth / 2);
-				}
-				maxPercentage = (uiVars.sourceWidth - maxWidth) / uiVars.sourceWidth * 100.0;
-			}
+			else
+				$('#safety-slider-max-label').html('<br>');
 			
-			var midPercentage = maxPercentage / 2.0;
-			if ((uiVars.sourceWidth * uiVars.sourceAspect) > uiVars.destWidth) {				
-				midPercentage = (uiVars.sourceWidth - uiVars.destWidth) / uiVars.sourceWidth * 100.0
-			}
-			if (midPercentage < minPercentage) {
-				midPercentage = minPercentage + (maxPercentage - minPercentage) / 2.0;
+			// 1.0 scaling
+			var midPercentage = midPercentage = (uiVars.sourceWidth - uiVars.destWidth) / uiVars.sourceWidth * 100.0;
+			if (midPercentage <= p.minPercentage) {
+				// 2.0 scaling
+				midPercentage = ((uiVars.sourceWidth * 2.0) - uiVars.destWidth) / (uiVars.sourceWidth * 2.0) * 100.0;
+			} else if (midPercentage >= p.maxPercentage) {
+				// 0.5 scaling
+				midPercentage = ((uiVars.sourceWidth / 2.0) - uiVars.destWidth) / (uiVars.sourceWidth / 2.0) * 100.0;
+				if (midPercentage >= p.maxPercentage) {
+					// 0.25 scaling
+					midPercentage = ((uiVars.sourceWidth / 4.0) - uiVars.destWidth) / (uiVars.sourceWidth / 4.0) * 100.0;
+				}
 			}
 
 			let sliderRange = {
-				'min': minPercentage,
-				'max': maxPercentage
+				'min': p.minPercentage,
+				'max': p.maxPercentage
 			}
 			if (!subpixelMode) {
-				var steps = minWidth-maxWidth;
-				var interval = (maxPercentage - minPercentage) / steps;
+				var steps = p.minWidth-p.maxWidth;
+				var interval = (p.maxPercentage - p.minPercentage) / steps;
 				for ( var i = (evenMode) ? 2 : 1; i < steps; (evenMode) ? i = i + 2 : i++) {
 					var key = (i * (100.0 / steps)) + '%';
-					sliderRange[key] = (1.0 - ((minWidth - i) / uiVars.sourceWidth)) * 100.0;
+					sliderRange[key] = (1.0 - ((p.minWidth - i) / uiVars.sourceWidth)) * 100.0;
 				}
 			}
 
@@ -508,7 +519,7 @@
 				snap: (!subpixelMode),
 				pips: {
 					mode: 'values',
-					values: [minPercentage, midPercentage, maxPercentage-0.00001],
+					values: [p.minPercentage, midPercentage, p.maxPercentage-0.00001],
 					density: 5
 				}
 			});
@@ -646,7 +657,7 @@
 						trigger: 'left',
 						callback: function(key, options) {
 							uiVars.sourceAspect = parseFloat(key);
-							set_min_safety_for_all_frames();
+							check_safety_for_all_frames();
 							update_slider_range();
 						},
 						position: function(opt, x, y) {
