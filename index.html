@@ -6,7 +6,7 @@
 	<title>Norville's Frame Chart Calculator</title>
 	<meta name="tagline" content="You know, for kids!">
 	<meta name="author" content="Peter Postma">
-	<meta name="revised" content="September 10th, 2020, 4:16pm">
+	<meta name="revised" content="September 10th, 2020, 4:32pm">
 	
 	<script type="text/javascript" src="resources/jquery.js"></script>
 	<script type="text/javascript" src="resources/nouislider.min.js"></script>
@@ -754,19 +754,24 @@
 					build: function($triggerElement, e){
 						return {
 							callback: function(key, options) {
-								if (key == 0) {
-									fitToWidth = uiVars.sourceWidth;
-									fitToHeight = uiVars.sourceHeight;
-								} else {
-									key--;
+								if (key > 100) {
+									key -= 101;
 									vals = calculate_values(frameVars[key]);
-									fitToWidth = vals.extractionWidth;
-									fitToHeight = vals.extractionHeight;
+									safetyMargin = (uiVars.sourceWidth - uiVars.destWidth / vals.hScale) / uiVars.sourceWidth;
+								} else {
+									if (key == 0) {
+										fitToWidth = uiVars.sourceWidth;
+										fitToHeight = uiVars.sourceHeight;
+									} else {
+										vals = calculate_values(frameVars[--key]);
+										fitToWidth = vals.extractionWidth;
+										fitToHeight = vals.extractionHeight;
+									}
+									if ( fitToHeight * uiVars.destAspect / uiVars.sourceAspect <= fitToWidth )
+										safetyMargin = (uiVars.sourceWidth - fitToHeight * uiVars.destAspect / uiVars.sourceAspect) / uiVars.sourceWidth;
+									else
+										safetyMargin = (uiVars.sourceWidth - fitToWidth) / uiVars.sourceWidth;
 								}
-								if ( fitToHeight * uiVars.destAspect / uiVars.sourceAspect <= fitToWidth )
-									safetyMargin = (uiVars.sourceWidth - fitToHeight * uiVars.destAspect / uiVars.sourceAspect) / uiVars.sourceWidth;
-								else
-									safetyMargin = (uiVars.sourceWidth - fitToWidth) / uiVars.sourceWidth;
 								$('#safety-margin').val(safetyMargin * 100.0).change();
 							},
 							items: {
@@ -774,7 +779,16 @@
 								"1": {name: $('#tab-1').text(), disabled: function(key) { return (currentFrameTab == key)} },
 								"2": {name: $('#tab-2').text(), disabled: function(key) { return (currentFrameTab == key)} },
 								"3": {name: $('#tab-3').text(), disabled: function(key) { return (currentFrameTab == key)} },
-								"4": {name: $('#tab-4').text(), disabled: function(key) { return (currentFrameTab == key)} }
+								"4": {name: $('#tab-4').text(), disabled: function(key) { return (currentFrameTab == key)} },
+								"submenu": {
+									name: "Match Scaling From ",
+									items: {
+										"101": {name: $('#tab-1').text(), disabled: function(key) { return (currentFrameTab == key - 100)} },
+										"102": {name: $('#tab-2').text(), disabled: function(key) { return (currentFrameTab == key - 100)} },
+										"103": {name: $('#tab-3').text(), disabled: function(key) { return (currentFrameTab == key - 100)} },
+										"104": {name: $('#tab-4').text(), disabled: function(key) { return (currentFrameTab == key - 100)} }
+									}
+								}
 							}
 						};
 					}
@@ -922,7 +936,7 @@
 										}
 									}
 								}
-							};
+							}
 						}
 					});
 				});
