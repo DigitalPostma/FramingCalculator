@@ -6,7 +6,7 @@
 	<title>Norville's Frame Chart Calculator</title>
 	<meta name="tagline" content="You know, for kids!">
 	<meta name="author" content="Peter Postma">
-	<meta name="revised" content="September 8th, 2020, 10:33pm">
+	<meta name="revised" content="September 10th, 2020, 1:20am">
 	
 	<script type="text/javascript" src="resources/jquery.js"></script>
 	<script type="text/javascript" src="resources/nouislider.min.js"></script>
@@ -246,6 +246,7 @@
 					dims = key.split('x');
 					uiVars.sourceWidth = parseInt(dims[0]);
 					uiVars.sourceHeight = parseInt(dims[1]);
+					set_min_safety_for_all_frames();
 					update_slider_range();
 				},
 				position: function(opt, x, y) {
@@ -278,6 +279,7 @@
 
 			vals.aspectRatio = vars.destAspect;
 			
+			vars.destHeight = Math.round(vars.destWidth / vars.destAspect);
 			vals.extractionHeight = vals.extractionWidth / vars.destAspect * uiVars.sourceAspect;
 			vals.vSafety = (uiVars.sourceHeight - vals.extractionHeight) / uiVars.sourceHeight * 100.0;
 			heightVariance = 0.0
@@ -310,13 +312,11 @@
 			if (!subpixelMode) {
 				vals.extractionX = Math.round(vals.extractionX - 0.01);  // -0.01 to force 0.5 to round down
 				vals.extractionY = Math.round(vals.extractionY - 0.01);
-				vars.destWidth = Math.round(vars.destWidth);
-				uiVars.destHeight = Math.round(uiVars.destHeight);
 				vals.extractionWidth = Math.round(vals.extractionWidth);
 			}
 			
 			if (fitHeight) {
-				vals.vScale = uiVars.destHeight / vals.extractionHeight;
+				vals.vScale = vars.destHeight / vals.extractionHeight;
 				vals.hScale = vals.vScale * uiVars.sourceAspect;
 			} else {
 				vals.hScale = vars.destWidth / vals.extractionWidth;
@@ -387,8 +387,6 @@
 		}
 		
 		function update_fields() {
-			uiVars.destHeight = Math.round(uiVars.destWidth / uiVars.destAspect);
-
 			var vals = calculate_current_values();
 			
 			for (let [key, value] of Object.entries(uiVars)) {
@@ -409,7 +407,7 @@
 				}
 			}
 			for (let [key, value] of Object.entries(vals)) {
-				var precision = 5
+				var precision = 6
 				if (!subpixelMode && String(key).startsWith('extraction')) {
 					precision = (key === 'extractionX' || key === 'extractionY') ? 1 : 0;
 				}
@@ -432,6 +430,24 @@
 			if (parseFloat(this.style.left) > 99)
 				value += 0.00001;
 			safetySlider.noUiSlider.set(value);
+		}
+		
+		function set_min_safety_for_all_frames() {
+			for (var i = 0; i < 4; i++) {
+				var minPercentage = 0.0;
+				var minWidth = uiVars.sourceWidth;
+				if (uiVars.sourceHeight * frameVars[i].destAspect / uiVars.sourceAspect < minWidth) {
+					minWidth = (uiVars.sourceHeight * frameVars[i].destAspect / uiVars.sourceAspect);
+					if (!subpixelMode) {
+						minWidth = Math.round(minWidth);
+						if (evenMode && minWidth % 2 != 0)
+							minWidth--
+					}
+					minPercentage = (uiVars.sourceWidth - minWidth) / uiVars.sourceWidth * 100.0;
+				}
+				if (frameVars[i].safetyMargin < minPercentage)
+					frameVars[i].safetyMargin = minPercentage;
+			}
 		}
 
 		function update_slider_range() {
@@ -630,6 +646,7 @@
 						trigger: 'left',
 						callback: function(key, options) {
 							uiVars.sourceAspect = parseFloat(key);
+							set_min_safety_for_all_frames();
 							update_slider_range();
 						},
 						position: function(opt, x, y) {
