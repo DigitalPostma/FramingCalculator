@@ -296,14 +296,14 @@
 				if (vars.alignTo === 0)
 					vals.extractionY = 0;
 				else {
-					var tvals = calculate_values(frameVars[(vars.alignTo - 1)]);
+					var tvals = (vars.alignTo == currentFrameTab) ? calculate_current_values() : calculate_values(frameVars[(vars.alignTo - 1)]);
 					vals.extractionY = tvals.extractionY;
 				}
 			else if (vars.align === 2) //bottom
 				if (vars.alignTo === 0)
 					vals.extractionY = uiVars.sourceHeight - vals.extractionHeight;
 				else {
-					var tvals = calculate_values(frameVars[(vars.alignTo - 1)]);
+					var tvals = (vars.alignTo == currentFrameTab) ? calculate_current_values() : calculate_values(frameVars[(vars.alignTo - 1)]);
 					vals.extractionY = tvals.extractionY + tvals.extractionHeight - vals.extractionHeight;
 				}
 			else // center
@@ -985,7 +985,7 @@
 				update_fields();
 			});
 
-			// Handle updates to text entered in box for sider
+			// Handle updates to text entered in box for slider
 			$('#safety-margin').on('change', function () {
 				safetySlider.noUiSlider.set(this.value);
 				update_fields();
